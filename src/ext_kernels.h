@@ -9,9 +9,9 @@ void calc_scattering_cross_section(void);
 void calc_dd_coefficients(void);
 void calc_time_delta(void);
 void calc_denominator(void);
-void calc_total_cross_section(
-		const double * restrict xs,
-		double * restrict total_cross_section);
+void calc_total_cross_section(void);
+
+void store_scalar_flux(double* to);
 
 bool check_convergence(
 		double *old, 

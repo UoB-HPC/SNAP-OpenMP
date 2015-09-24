@@ -79,7 +79,7 @@ OBJS = global.o snap_main.o utils.o version.o plib.o geom.o sn.o \
        outer.o expxs.o inner.o sweep.o octsweep.o dim1_sweep.o dim3_sweep.o \
        output.o time.o mms.o $(OCL_OBJS)
 
-OCL_OBJS = ext_sweep.o ext_init.o ext_scalar.o ext_memory.o ext_iterations.o ext_problem.o
+OCL_OBJS = ext_sweep.o ext_memory.o ext_iterations.o ext_kernels.o
 
 SRCS = global.f90 snap_main.f90 utils.f90 version.f90 plib.f90 geom.f90 \
        sn.f90 data.f90 control.f90 input.f90 setup.f90 dealloc.f90 \

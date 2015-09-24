@@ -1,5 +1,6 @@
 #include "ext_sweep.h"
 #include "ext_kernels.h"
+#include "ext_shared.h"
 
 void ext_reduce_angular_(void);
 
@@ -42,17 +43,17 @@ void ext_iterations_(void)
 
 			num_groups_todo = ng;
 			tot_outers++;
-			expand_cross_section(&xs, &total_cross_section);
+			calc_total_cross_section();
 			calc_scattering_cross_section();
 			calc_dd_coefficients();
 			calc_time_delta();
-			calc_denomnator();
+			calc_denominator();
 
 			// Compute the outer source
 			calc_outer_source();
 
 			// Save flux
-			get_scalar_flux_(old_outer_scalar, false);
+			store_scalar_flux(old_outer_scalar);
 
 			// Inner loop
 			for (unsigned int i = 0; i < inners; i++)
@@ -63,7 +64,7 @@ void ext_iterations_(void)
 				calc_inner_source();
 
 				// Save flux
-				get_scalar_flux_(old_inner_scalar, false);
+				store_scalar_flux(old_inner_scalar);
 				zero_edge_flux_buffers();
 
 #ifdef TIMING
@@ -86,7 +87,7 @@ void ext_iterations_(void)
 #endif
 
 				// Check convergence
-				get_scalar_flux(new_scalar, true);
+				store_scalar_flux(new_scalar);
 
 #ifdef TIMING
 				double t4 = omp_get_wtime();
@@ -168,31 +169,31 @@ void ext_reduce_angular_(void)
 						// Note all work items will all take the same branch
 						if (time_delta(g) != 0.0)
 						{
-							for(int d = 0; d < ndiag; ++d)
+							for(int o = 0; o < noct; ++o)
 							{
-								tot_g += weights(a) * (0.5 * (angular(d,a,g,i,j,k) + angular_prev(d,a,g,i,j,k)));
+								tot_g += weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
 							}
 
 							for (unsigned int l = 0; l < (cmom-1); l++)
 							{
-								for(int d = 0; d < ndiag; ++d)
+								for(int o = 0; o < noct; ++o)
 								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(d,a,g,i,j,k) + angular_prev(d,a,g,i,j,k)));
+									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
 								}
 							}
 						}
 						else
 						{
-							for(int d = 0; d < ndiag; ++d)
+							for(int o = 0; o < noct; ++o)
 							{
-								tot_g += weights(a) * angular(d,a,g,i,j,k);
+								tot_g += weights(a) * angular(o,a,g,i,j,k);
 							}
 
 							for (unsigned int l = 0; l < (cmom-1); l++)
 							{
-								for(int d = 0; d < ndiag; ++d)
+								for(int o = 0; o < noct; ++o)
 								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(d,a,g,i,j,k);
+									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(o,a,g,i,j,k);
 								}
 							}
 						}

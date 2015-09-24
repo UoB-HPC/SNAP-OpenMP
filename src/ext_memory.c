@@ -1,4 +1,5 @@
 #include "ext_problem.h"
+#include "ext_kernels.h"
 
 // Initialises the problem parameters
 void ext_initialise_parameters_(
@@ -67,7 +68,7 @@ void ext_initialise_memory_(
 		double *gg_cs,
 		int *lma,
 		double *g2g_source,
-		double *flux_in)
+		double *f_flux_in)
 {
 	// Create zero array for the edge flux buffers
 	// First we need maximum two of nx, ny and nz
@@ -86,14 +87,14 @@ void ext_initialise_memory_(
 	}
 
 	zero_edge = (double *)calloc(sizeof(double), s);
-	flux_in = malloc(sizeof(double*)*noct);
-	flux_out = malloc(sizeof(double*)*noct);
+	flux_in = (double**)malloc(sizeof(double*)*noct);
+	flux_out = (double**)malloc(sizeof(double*)*noct);
 
 	// Allocate flux in and out
 	for (unsigned int o = 0; o < noct; o++)
 	{
-		flux_in[o] = malloc(sizeof(double)*nang*nx*ny*nz*ng);
-		flux_out[o] = malloc(sizeof(double)*nang*nx*ny*nz*ng);
+		flux_in[o] = (double*)malloc(sizeof(double)*nang*nx*ny*nz*ng);
+		flux_out[o] = (double*)malloc(sizeof(double)*nang*nx*ny*nz*ng);
 
 		// Zero centre
 		for(int i = 0; i < nang*nx*ny*nz*ng; ++i)
@@ -151,7 +152,6 @@ void ext_initialise_memory_(
 	groups_todo = malloc(sizeof(unsigned int)*ng);
 }
 
-
 // Copy the scalar flux value back to the host and transpose
 void ext_get_transpose_scalar_flux_(double *scalar)
 {
@@ -196,7 +196,7 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
 // Copy the flux_out buffer back to the host
 void ext_get_transpose_output_flux_(double* output_flux)
 {
-	double *tmp = (global_timestep % 2 == 0) ? flux_out[o] : flux_in[0];
+	double *tmp = (global_timestep % 2 == 0) ? flux_out[0] : flux_in[0];
 
 	// Transpose the data into the original SNAP format
 	for (int a = 0; a < nang; a++)

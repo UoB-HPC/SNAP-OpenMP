@@ -35,8 +35,8 @@ double tolr;
 
 // Data
 double* source;
-double* *flux_in;
-double* *flux_out;
+double** flux_in;
+double** flux_out;
 double* flux_i;
 double* flux_j;
 double* flux_k;
@@ -54,14 +54,14 @@ double* weights;
 double* velocity;
 double* scalar_flux;
 double* xs;
-double* map;
+int* map;
 double* fixed_source;
 double* gg_cs;
 double* lma;
 double* g2g_source;
 double* scalar_mom;
 double* scat_cs;
-double* groups_todo;
+int* groups_todo;
 
 // Create an empty buffer to zero out the edge flux arrays
 // Each direction can share it as we make sure that it is

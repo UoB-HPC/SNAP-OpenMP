@@ -1,4 +1,6 @@
 #include "ext_sweep.h"
+#include "ext_kernels.h"
+#include "ext_shared.h"
 
 // Compute the order of the sweep for the first octant
 plane *compute_sweep_order(void)
@@ -81,9 +83,13 @@ void sweep_octant(
     int jstep = (yhi == ny) ? -1 : 1;
     int kstep = (zhi == nz) ? -1 : 1;
 
+	double* l_flux_in = (timestep % 2 == 0) ? flux_in[oct] : flux_out[oct];
+	double* l_flux_out = (timestep % 2 == 0) ? flux_out[oct] : flux_in[oct];
+
 	for (unsigned int d = 0; d < ndiag; d++)
 	{
-		sweep_cell(istep, jstep, kstep, oct, cell_index, groups_todo, num_groups_todo, planes[d].num_cells);
+		sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
+			   	planes[d].cells, groups_todo, num_groups_todo, planes[d].num_cells);
 	}
 }
 
@@ -99,7 +105,7 @@ void perform_sweep(
 
 	for (int o = 0; o < noct; o++)
 	{
-		enqueue_octant(global_timestep, o, ndiag, planes, num_groups_todo);
+		sweep_octant(global_timestep, o, ndiag, planes, num_groups_todo);
 		zero_edge_flux_buffers();
 	}
 
@@ -118,6 +124,8 @@ void sweep_cell(
 		const int jstep,
 		const int kstep,
 		const unsigned int oct,
+		const double* restrict l_flux_in,
+		double* restrict l_flux_out,
 		const struct cell * restrict cell_index,
 		const unsigned int * restrict groups_todo,
 		const unsigned int num_groups_todo,
@@ -147,7 +155,7 @@ void sweep_cell(
 				// Add in the anisotropic scattering source moments
 				for (unsigned int l = 1; l < cmom; l++)
 				{
-					source_term += scat_coef(a_idx,l,oct) * source(l,i,j,k,g_idx);
+					source_term += scat_coeff(a_idx,l,oct) * source(l,i,j,k,g_idx);
 				}
 
 				double psi = source_term 
@@ -158,7 +166,7 @@ void sweep_cell(
 				// Add contribution from last timestep flux if time-dependant
 				if (time_delta(g_idx) != 0.0)
 				{
-					psi += time_delta(g_idx) * flux_in(a_idx,g_idx,i,j,k);
+					psi += time_delta(g_idx) * l_flux_in(a_idx,g_idx,i,j,k);
 				}
 
 				psi *= denom(a_idx,g_idx,i,j,k);
@@ -171,7 +179,7 @@ void sweep_cell(
 				// Time differencing on final flux value
 				if (time_delta(g_idx) != 0.0)
 				{
-					psi = 2.0 * psi - flux_in(a_idx,g_idx,i,j,k);
+					psi = 2.0 * psi - l_flux_in(a_idx,g_idx,i,j,k);
 				}
 
 				// Perform the fixup loop
@@ -200,7 +208,7 @@ void sweep_cell(
 
 					if (time_delta(g_idx) != 0.0)
 					{
-						psi += time_delta(g_idx) * flux_in(a_idx,g_idx,i,j,k) * (1.0+zeros[3]);
+						psi += time_delta(g_idx) * l_flux_in(a_idx,g_idx,i,j,k) * (1.0+zeros[3]);
 					}
 					psi = 0.5*psi + source_term;
 					double recalc_denom = total_cross_section(g_idx,i,j,k);
@@ -224,7 +232,7 @@ void sweep_cell(
 					tmp_flux_k = 2.0 * psi - flux_k(a_idx,g_idx,i,j);
 					if (time_delta(g_idx) != 0.0)
 					{
-						psi = 2.0*psi - flux_in(a_idx,g_idx,i,j,k);
+						psi = 2.0*psi - l_flux_in(a_idx,g_idx,i,j,k);
 					}
 				}
 				// Fix up loop is done, just need to set the final values
@@ -237,7 +245,7 @@ void sweep_cell(
 				flux_i(a_idx,g_idx,j,k) = tmp_flux_i;
 				flux_j(a_idx,g_idx,i,k) = tmp_flux_j;
 				flux_k(a_idx,g_idx,i,j) = tmp_flux_k;
-				flux_out(a_idx,g_idx,i,j,k) = psi;
+				l_flux_out(a_idx,g_idx,i,j,k) = psi;
 			}
 		}
 	}

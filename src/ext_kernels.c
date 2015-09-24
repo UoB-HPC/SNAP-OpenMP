@@ -105,7 +105,7 @@ void calc_outer_source(void)
 							continue;
 						}
 
-						g2g_source(0,i,j,k,g1) += gg_cs(map(i,j,k)-1,0,g2,g1) * scalar(g2,i,j,k);
+						g2g_source(0,i,j,k,g1) += gg_cs(map(i,j,k)-1,0,g2,g1) * scalar_flux(g2,i,j,k);
 
 						unsigned int mom = 1;
 						for (unsigned int l = 1; l < nmom; l++)
@@ -135,7 +135,7 @@ void calc_inner_source(void)
 			{
 				for (unsigned int g = 0; g < ng; g++)
 				{
-					source(0,i,j,k,g) = g2g_source(0,i,j,k,g) + scat_cs(0,i,j,k,g) * scalar(g,i,j,k);
+					source(0,i,j,k,g) = g2g_source(0,i,j,k,g) + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
 
 					unsigned int mom = 1;
 					for (unsigned int l = 1; l < nmom; l++)
@@ -257,3 +257,11 @@ bool check_convergence(
 	return r;
 }
 
+// Copies the value of scalar flux
+void store_scalar_flux(double* to)
+{
+	for(int i = 0; i < nx*ny*nz*ng; ++i)
+	{
+		to[i] = scalar_flux[i];
+	}
+}
