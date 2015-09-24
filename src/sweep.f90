@@ -277,7 +277,7 @@ MODULE sweep_module
     !CALL wtime ( t1 )
     !CALL ocl_sweep
     !CALL wtime ( t2 )
-    !CALL ocl_scalar_flux
+    !CALL ext_reduce_angular
     !CALL wtime ( t3 )
     !PRINT *, "OCL", t3-t1
     !PRINT *, "OCL sweep", t2-t1

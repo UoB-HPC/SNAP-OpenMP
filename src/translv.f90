@@ -117,14 +117,14 @@ SUBROUTINE translv
 
 !_______________________________________________________________________
 !
-!   Copy the problem sizes and constant arrays to OpenCL device
+!   Initialise the problem parameters and allocate memory
 !_______________________________________________________________________
 
   CALL wtime ( ocl_first_copy_tic )
 
-  CALL set_ocl_problem ( nx, ny_gl, nz_gl, ng, nang, noct, cmom, nmom, &
+  CALL ext_initialise_parameters ( nx, ny_gl, nz_gl, ng, nang, noct, cmom, nmom, &
     ichunk, dx, dy, dz, dt, nmat, nsteps, oitm, iitm, epsi, tolr )
-  CALL copy_to_device ( mu, eta, xi, ec, t_xs, w, v, sigt, mat, qi, slgg, lma, q2grp, ptr_in )
+  CALL ext_initialise_memory ( mu, eta, xi, ec, t_xs, w, v, sigt, mat, qi, slgg, lma, q2grp, ptr_in )
 
   CALL wtime ( ocl_first_copy_toc )
 
@@ -132,10 +132,10 @@ SUBROUTINE translv
 
 !_______________________________________________________________________
 !
-!   Run the iteration loops on OpenCL device
+!   Run the iterations
 !_______________________________________________________________________
 
-  CALL ocl_iterations
+  CALL ext_iterations
 
 !_______________________________________________________________________
 !
@@ -291,7 +291,7 @@ SUBROUTINE translv
 !   Check angular flux difference
 !_______________________________________________________________________
 
-  CALL get_output_flux ( ocl_angular_flux )
+  CALL ext_get_transpose_output_flux ( ocl_angular_flux )
   PRINT *
   PRINT *, "Checking angular flux"
   PRINT *, "Max difference out:", MAXVAL ( ABS ( ptr_out-ocl_angular_flux ) )
@@ -312,7 +312,7 @@ SUBROUTINE translv
   PRINT *, "Tolerance", 100.0*epsi
   PRINT *
 
-  CALL get_scalar_flux_trans( scalar_flux )
+  CALL ext_get_transpose_scalar_flux( scalar_flux )
 
   IF ( ALL ( ABS ( scalar_flux - flux ) < 100.0*epsi ) ) THEN
     PRINT *, "Scalar flux matched"
@@ -323,7 +323,7 @@ SUBROUTINE translv
 
   PRINT *
 
-  CALL get_scalar_flux_moments( scalar_flux_moments )
+  CALL ext_get_transpose_scalar_moments( scalar_flux_moments )
   IF ( ALL ( ABS ( scalar_flux_moments - fluxm ) < 100.0*epsi ) ) THEN
     PRINT *, "Scalar flux moments matched"
   ELSE

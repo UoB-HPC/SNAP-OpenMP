@@ -1,5 +1,4 @@
-#ifndef __SHARED
-#define __SHARED
+#pragma once
 
 /*
  *		Array access macros
@@ -22,23 +21,8 @@
 #define scalar(g,i,j,k) scalar[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define weights(a) weights[(a)]
 
-#define angular0(a,g,i,j,k) angular0[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular1(a,g,i,j,k) angular1[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular2(a,g,i,j,k) angular2[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular3(a,g,i,j,k) angular3[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular4(a,g,i,j,k) angular4[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular5(a,g,i,j,k) angular5[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular6(a,g,i,j,k) angular6[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular7(a,g,i,j,k) angular7[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-
-#define angular_prev0(a,g,i,j,k) angular_prev0[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev1(a,g,i,j,k) angular_prev1[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev2(a,g,i,j,k) angular_prev2[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev3(a,g,i,j,k) angular_prev3[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev4(a,g,i,j,k) angular_prev4[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev5(a,g,i,j,k) angular_prev5[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev6(a,g,i,j,k) angular_prev6[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev7(a,g,i,j,k) angular_prev7[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
+#define angular(d,a,g,i,j,k) angular[d][(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
+#define angular_prev(d,a,g,i,j,k) angular_prev[d][(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
 
 #define velocity(g) velocity[(g)]
 
@@ -57,4 +41,3 @@ struct cell {
     unsigned int i,j,k;
 };
 
-#endif

@@ -1,8 +1,45 @@
-#include "ocl_sweep.h"
+#include "ext_problem.h"
 
-// Create buffers and copy the flux, source and
-// cross section arrays to the OpenCL device
-//
+// Initialises the problem parameters
+void ext_initialise_parameters_(
+    int *nx_, int *ny_, int *nz_,
+    int *ng_, int *nang_, int *noct_,
+    int *cmom_, int *nmom_,
+    int *ichunk_,
+    double *dx_, double *dy_, double *dz_,
+    double *dt_,
+    int *nmat_,
+    int *timesteps_, int *outers_, int *inners_,
+    double *epsi_, double *tolr_)
+{
+    // Save problem size information to globals
+    nx = *nx_;
+    ny = *ny_;
+    nz = *nz_;
+    ng = *ng_;
+    nang = *nang_;
+    noct = *noct_;
+    cmom = *cmom_;
+    nmom = *nmom_;
+    ichunk = *ichunk_;
+    dx = *dx_;
+    dy = *dy_;
+    dz = *dz_;
+    dt = *dt_;
+    nmat = *nmat_;
+    timesteps = *timesteps_;
+    outers = *outers_;
+    inners = *inners_;
+
+    epsi = *epsi_;
+    tolr = *tolr_;
+
+    if (nx != ichunk)
+	{
+        printf("Warning: nx and ichunk are different - expect the answers to be wrong...\n");
+	}
+}
+
 // Argument list:
 // nx, ny, nz are the (local to MPI task) dimensions of the grid
 // ng is the number of energy groups
@@ -16,7 +53,7 @@
 // flux_in(nang,nx,ny,nz,noct,ng)   - Incoming time-edge flux pointer
 // denom(nang,nx,ny,nz,ng) - Sweep denominator, pre-computed/inverted
 // weights(nang) - angle weights for scalar reduction
-void copy_to_device_(
+void ext_initialise_memory_(
 		double *mu, 
 		double *eta, 
 		double *xi,
@@ -114,56 +151,72 @@ void copy_to_device_(
 	groups_todo = malloc(sizeof(unsigned int)*ng);
 }
 
+
 // Copy the scalar flux value back to the host and transpose
-void get_scalar_flux_trans_(double *scalar)
+void ext_get_transpose_scalar_flux_(double *scalar)
 {
-	double *tmp = malloc(sizeof(double)*nx*ny*nz*ng);
-	cl_int err;
-	err = clEnqueueReadBuffer(queue[0], d_scalar_flux, CL_TRUE, 0, sizeof(double)*nx*ny*nz*ng, tmp, 0, NULL, NULL);
+	// Transpose the data into the original SNAP format
 	for (unsigned int g = 0; g < ng; g++)
+	{
 		for (unsigned int i = 0; i < nx; i++)
+		{
 			for (unsigned int j = 0; j < ny; j++)
+			{
 				for (unsigned int k = 0; k < nz; k++)
-					scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] = tmp[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
-
-	free(tmp);
+				{
+					scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] = scalar_flux[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
+				}
+			}
+		}
+	}
 }
 
-void get_scalar_flux_moments_(double *scalar_moments)
+void ext_get_transpose_scalar_moments_(double *scalar_moments)
 {
-	double *tmp = malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng);
-	cl_int err;
-	err = clEnqueueReadBuffer(queue[0], d_scalar_mom, CL_TRUE, 0, sizeof(double)*(cmom-1)*nx*ny*nz*ng, tmp, 0, NULL, NULL);
+	// Transpose the data into the original SNAP format
 	for (unsigned int g = 0; g < ng; g++)
+	{
 		for (unsigned int l = 0; l < cmom-1; l++)
+		{
 			for (unsigned int i = 0; i < nx; i++)
+			{
 				for (unsigned int j = 0; j < ny; j++)
+				{
 					for (unsigned int k = 0; k < nz; k++)
-						scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] = tmp[g+(ng*l)+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
-	free(tmp);
+					{
+						scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] 
+							= scalar_mom[g+(ng*l)+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
+					}
+				}
+			}
+		}
+	}
 }
-
 
 // Copy the flux_out buffer back to the host
-void get_output_flux_(double* flux_out)
+void ext_get_transpose_output_flux_(double* output_flux)
 {
-	double *tmp = calloc(sizeof(double),nang*ng*nx*ny*nz*noct);
-	cl_int err;
-	for (unsigned int o = 0; o < noct; o++)
-	{
-		if (global_timestep % 2 == 0)
-			err = clEnqueueReadBuffer(queue[0], d_flux_out[o], CL_TRUE, 0, sizeof(double)*nang*nx*ny*nz*ng, &(tmp[nang*ng*nx*ny*nz*o]), 0, NULL, NULL);
-		else
-			err = clEnqueueReadBuffer(queue[0], d_flux_in[o], CL_TRUE, 0, sizeof(double)*nang*nx*ny*nz*ng, &(tmp[nang*ng*nx*ny*nz*o]), 0, NULL, NULL);
-	}
+	double *tmp = (global_timestep % 2 == 0) ? flux_out[o] : flux_in[0];
 
 	// Transpose the data into the original SNAP format
 	for (int a = 0; a < nang; a++)
+	{
 		for (int g = 0; g < ng; g++)
+		{
 			for (int i = 0; i < nx; i++)
+			{
 				for (int j = 0; j < ny; j++)
+				{
 					for (int k = 0; k < nz; k++)
+					{
 						for (int o = 0; o < noct; o++)
-							flux_out[a+(nang*i)+(nang*nx*j)+(nang*nx*ny*k)+(nang*nx*ny*nz*o)+(nang*nx*ny*nz*noct*g)] = tmp[a+(nang*g)+(nang*ng*i)+(nang*ng*nx*j)+(nang*ng*nx*ny*k)+(nang*ng*nx*ny*nz*o)];
-	free(tmp);
+						{
+							output_flux[a+(nang*i)+(nang*nx*j)+(nang*nx*ny*k)+(nang*nx*ny*nz*o)+(nang*nx*ny*nz*noct*g)] 
+								= tmp[a+(nang*g)+(nang*ng*i)+(nang*ng*nx*j)+(nang*ng*nx*ny*k)+(nang*ng*nx*ny*nz*o)];
+						}
+					}
+				}
+			}
+		}
+	}
 }

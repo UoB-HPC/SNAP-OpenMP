@@ -1,49 +1,39 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
-#include <omp.h>
+struct cell 
+{
+    unsigned int i,j,k;
+};
 
-#include "ext_problem.h"
+typedef struct 
+{
+    unsigned int num_cells;
+    struct cell *cells;
 
-double* source;
-double* *flux_in;
-double* *flux_out;
-double* flux_i;
-double* flux_j;
-double* flux_k;
-double* denom;
-double dd_i;
-double* dd_j;
-double* dd_k;
-double* mu;
-double* eta;
-double* xi;
-double* scat_coeff;
-double* time_delta;
-double* total_cross_section;
-double* weights;
-double* velocity;
-double* scalar_flux;
-double* xs;
-double* map;
-double* fixed_source;
-double* gg_cs;
-double* lma;
-double* g2g_source;
-double* scalar_mom;
-double* scat_cs;
-double* groups_todo;
+    // index is an index into the cells array for when storing the cell indexes
+    unsigned int index;
+} plane;
 
-// Create an empty buffer to zero out the edge flux arrays
-// Each direction can share it as we make sure that it is
-// big enough for each of them
-double *zero_edge;
+plane *compute_sweep_order(void);
 
-// Global variable for the timestep
-unsigned int global_timestep;
+void sweep_octant(
+		const unsigned int timestep, 
+		const unsigned int oct, 
+		const unsigned int ndiag, 
+		const plane *planes, 
+		const unsigned int num_groups_todo);
 
-void ocl_sweep_(unsigned int);
+void perform_sweep(
+		unsigned int num_groups_todo);
+
+void sweep_cell(
+		const int istep,
+		const int jstep,
+		const int kstep,
+		const unsigned int oct,
+		const struct cell * restrict cell_index,
+		const unsigned int * restrict groups_todo,
+		const unsigned int num_groups_todo,
+		const unsigned int num_cells);
+
+
