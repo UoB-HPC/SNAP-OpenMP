@@ -1,0 +1,89 @@
+Serial runtime (16x16x16)
+
+*************************************************************
+
+Profiling Results:
+
+Kernel Name                      Calls        Runtime (ms)
+ext_initialise_parameters_           1            0.002097
+zero_edge_flux_buffers              10           43.822977
+zero_flux_moments_buffer             2            2.392414
+zero_scalar_flux                     2            0.815823
+ext_initialise_memory_               1            3.722762
+calc_total_cross_section             1            0.510629
+calc_scattering_cross_section        1            0.675965
+calc_dd_coefficients                 1            0.002252
+calc_time_delta                      1            0.000476
+calc_denominator                     1          221.991062
+calc_outer_source                    1          108.906832
+store_scalar_flux                    3            2.126949
+calc_inner_source                    1           10.484043
+compute_sweep_order                  1            0.042702
+sweep_cell                         368         8306.597748
+ext_reduce_angular_                  1         2380.461360
+
+Total elapsed time: 11082.556091ms
+
+*************************************************************
+
+
+OpenMP CPU 16 Threads (16x16x16)
+
+*************************************************************
+
+Profiling Results:
+
+Kernel Name                      Calls        Runtime (ms)
+ext_initialise_parameters_           1            0.000247
+zero_edge_flux_buffers              10           17.990041
+zero_flux_moments_buffer             2            0.615732
+zero_scalar_flux                     2            0.348279
+ext_initialise_memory_               1            3.150447
+calc_total_cross_section             1            0.274447
+calc_scattering_cross_section        1            1.054152
+calc_dd_coefficients                 1            0.002428
+calc_time_delta                      1            0.000514
+calc_denominator                     1           15.612825
+calc_outer_source                    1            7.528717
+store_scalar_flux                    3            0.259896
+calc_inner_source                    1            2.248725
+compute_sweep_order                  1            0.047280
+sweep_cell                         368          670.039268
+ext_reduce_angular_                  1          176.157070
+
+Total elapsed time: 895.330068ms
+
+Fortran Runtime:      0.399s
+
+*************************************************************
+
+
+MIC NATIVE APPLICATION (8x8x8):
+
+*************************************************************
+
+Profiling Results:
+
+Kernel Name                      Calls        Runtime (ms)
+ext_initialise_parameters_           1            0.007925
+zero_edge_flux_buffers              10           63.296839
+zero_flux_moments_buffer             2            0.733012
+zero_scalar_flux                     2            0.334974
+ext_initialise_memory_               1            2.121809
+calc_total_cross_section             1            0.561497
+calc_scattering_cross_section        1            2.141477
+calc_dd_coefficients                 1            0.030514
+calc_time_delta                      1            0.005946
+calc_denominator                     1          373.064216
+calc_outer_source                    1           42.523833
+store_scalar_flux                    3            1.224539
+calc_inner_source                    1            3.485423
+compute_sweep_order                  1            0.097046
+sweep_cell                         176          897.260104
+ext_reduce_angular_                  1         2193.084680
+
+Total elapsed time: 3579.973834ms
+
+Fortran Runtime:      0.121s
+*************************************************************
+

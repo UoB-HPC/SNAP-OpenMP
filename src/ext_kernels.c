@@ -17,7 +17,7 @@ void calc_denominator(void)
                 {
                     for (unsigned int a = 0; a < nang; ++a)
                     {
-                        denom(a,g,i,j,k) = 1.0 / (total_cross_section(g,i,j,k) 
+                        denom(a,g,i,j,k) = 1.0 / (total_cross_section(g,i,j,k)
                                 + time_delta(g) + mu(a)*dd_i + dd_j(a) + dd_k(a));
                     }
                 }

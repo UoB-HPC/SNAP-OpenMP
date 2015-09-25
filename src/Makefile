@@ -2,37 +2,44 @@
 # Build SNAP
 #
 OPT = yes
-FFLAGS = -O3 -openmp #-mmic
+FFLAGS = -O3
 FFLAG2 =
+OPENMP = -qopenmp
+TARGET = snap
+
+# Enables native compilation
+ifdef NATIVE
+  MIC=-mmic
+endif
 
 FORTRAN = mpiifort
 #FORTRAN = ifort
 #FORTRAN = gfortran
 #FORTRAN = bg-gfortran
 
-TARGET = snap
-
-ifeq ($(FORTRAN),mpif90)
-  FFLAGS = -O3 #-mmic
+ifeq ($(FORTRAN),mpiifort)
+  FFLAGS = -O3 $(OPENMP) $(MIC)
   FFLAG2 =
   ifeq ($(OPT),no)
     TARGET = snap_db
-    FFLAGS = -g -O0 -check bounds -traceback -openmp
+    FFLAGS = -g -O0 -check bounds -traceback $(OPENMP) $(MIC)
     FFLAG2 =
   endif
 endif
 
 CC = mpiicc
-CFLAGS = -std=c99 -openmp -O3 #-mmic -traceback
+CFLAGS = -O3 $(MIC) #$(OPENMP)
 CFLAGS2 = -lm
 
 # Enables fine grained profiling of C implementation
 ifdef PROFILER
-  CFLAGS=-std=gnu99 -O3 -DENABLE_PROFILING -openmp
+  CFLAGS += -std=gnu99 -DENABLE_PROFILING
+else
+  CFLAGS += -std=c99 
 endif
 
 ifdef TIMING
-	CFLAGS += -DTIMING
+  CFLAGS += -DTIMING
 endif
 
 .SUFFIXES:	.f90 .o

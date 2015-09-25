@@ -1,7 +1,7 @@
  SNAP: SN (Discrete Ordinates) Application Proxy
  Version Number..  1.01 
  Version Date..  03-25-2013
- Ran on  9-25-2015 at time 18:51:44
+ Ran on  9-25-2015 at time 20:33: 9
 
 ********************************************************************************
 
@@ -343,7 +343,7 @@
            1 - MPI_THREAD_FUNNELED
            2 - MPI_THREAD_SERIALIZED
            3 - MPI_THREAD_MULTIPLE
-    thread_level =  2
+    thread_level =  0
 
     .FALSE. nested threading
       nnested =    0
@@ -372,20 +372,20 @@
 
   Code Section                          Time (seconds)
  **************                        ****************
-    Parallel Setup                       1.2600E-03
-    Input                                2.3389E-04
-    Setup                                2.2418E-03
-    Solve                                3.0888E+00
-       Parameter Setup                   8.4345E-01
-       Outer Source                      8.1491E-03
-       Inner Iterations                  3.7552E-01
-          Inner Source                   5.8389E-04
-          Transport Sweeps               3.7439E-01
-          Inner Misc Ops                 5.4097E-04
-       Solution Misc Ops                 1.8617E+00
+    Parallel Setup                       1.3039E-03
+    Input                                2.4486E-04
+    Setup                                2.3310E-03
+    Solve                                1.3306E+01
+       Parameter Setup                   8.5205E-01
+       Outer Source                      8.1270E-03
+       Inner Iterations                  3.7889E-01
+          Inner Source                   6.4802E-04
+          Transport Sweeps               3.7744E-01
+          Inner Misc Ops                 7.9894E-04
+       Solution Misc Ops                 1.2067E+01
     Output                               1.1921E-05
-  Total Execution time                   9.4911E+00
+  Total Execution time                   1.9692E+01
 
-  Grind Time (nanoseconds)         1.3862E+01
+  Grind Time (nanoseconds)         5.9716E+01
 
 ********************************************************************************
