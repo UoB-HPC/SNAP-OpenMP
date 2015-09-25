@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <math.h>
 #include <omp.h>
+#include "ext_profiler.h"
+
 
 // This file contains a list of the global problem variables
 // such as grid size, angles, energy groups, etc.
@@ -57,7 +59,7 @@ double* xs;
 int* map;
 double* fixed_source;
 double* gg_cs;
-double* lma;
+int* lma;
 double* g2g_source;
 double* scalar_mom;
 double* scat_cs;

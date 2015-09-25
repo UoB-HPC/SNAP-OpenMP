@@ -136,11 +136,15 @@ void ext_iterations_(void)
 	free(new_scalar);
 	free(old_inner_scalar);
 	free(groups_todo);
+
+    PRINT_PROFILING_RESULTS;
 }
 
 // Compute the scalar flux from the angular flux
 void ext_reduce_angular_(void)
 {
+    START_PROFILING;
+
 	double** angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
 	double** angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
@@ -204,4 +208,6 @@ void ext_reduce_angular_(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }

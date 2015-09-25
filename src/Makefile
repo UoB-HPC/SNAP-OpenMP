@@ -25,6 +25,12 @@ endif
 CC = mpicc
 CFLAGS = -std=c99 -O3
 CFLAGS2 = -lm
+
+# Enables fine grained profiling of C implementation
+ifdef PROFILER
+  CFLAGS=-std=gnu99 -O3 -DENABLE_PROFILING
+endif
+
 ifdef TIMING
 	CFLAGS += -DTIMING
 endif
@@ -77,9 +83,9 @@ endif
 OBJS = global.o snap_main.o utils.o version.o plib.o geom.o sn.o \
        data.o control.o input.o setup.o dealloc.o translv.o solvar.o \
        outer.o expxs.o inner.o sweep.o octsweep.o dim1_sweep.o dim3_sweep.o \
-       output.o time.o mms.o $(OCL_OBJS)
+       output.o time.o mms.o $(EXT_OBJS)
 
-OCL_OBJS = ext_sweep.o ext_memory.o ext_iterations.o ext_kernels.o
+EXT_OBJS = ext_sweep.o ext_memory.o ext_iterations.o ext_kernels.o ext_profiler.o
 
 SRCS = global.f90 snap_main.f90 utils.f90 version.f90 plib.f90 geom.f90 \
        sn.f90 data.f90 control.f90 input.f90 setup.f90 dealloc.f90 \

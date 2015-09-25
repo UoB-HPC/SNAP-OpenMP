@@ -4,6 +4,8 @@
 // Calculate the inverted denominator for all the energy groups
 void calc_denominator(void)
 {
+    START_PROFILING;
+
 	for (unsigned int a_idx = 0; a_idx < nang; ++a_idx)
 	{
 		for (unsigned int g_idx = 0; g_idx < ng; ++g_idx)
@@ -21,20 +23,28 @@ void calc_denominator(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the time delta
 void calc_time_delta(void)
 {
+    START_PROFILING;
+
 	for(int g = 0; g < ng; ++g)
 	{
 		time_delta(g) = 2.0 / (dt * velocity(g));
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the diamond difference coefficients
 void calc_dd_coefficients(void)
 {
+    START_PROFILING;
+
 	dd_i = 2.0 / dx;
 
 	for(int a = 0; a < nang; ++a)
@@ -42,11 +52,15 @@ void calc_dd_coefficients(void)
 		dd_j(a) = (2.0/dy)*eta(a);
 		dd_k(a) = (2.0/dz)*xi(a);
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the total cross section from the spatial mapping
 void calc_total_cross_section(void)
 {
+    START_PROFILING;
+
 	for(unsigned int g = 0; g < ng; ++g)
 	{
 		for (unsigned int k = 0; k < nz; k++)
@@ -60,10 +74,14 @@ void calc_total_cross_section(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 void calc_scattering_cross_section(void)
 {
+    START_PROFILING;
+
 	for(unsigned int g = 0; g < ng; ++g)
 	{
 		for (unsigned int k = 0; k < nz; k++)
@@ -80,11 +98,15 @@ void calc_scattering_cross_section(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the outer source
 void calc_outer_source(void)
 {
+    START_PROFILING;
+
 	for(int k = 0; k < nz; ++k)
 	{
 		for(int j = 0; j < ny; ++j)
@@ -118,11 +140,15 @@ void calc_outer_source(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the inner source
 void calc_inner_source(void)
 {
+    START_PROFILING;
+
 	for(int k = 0; k < nz; ++k)
 	{
 		for(int j = 0; j < ny; ++j)
@@ -146,10 +172,14 @@ void calc_inner_source(void)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 void zero_edge_flux_buffers(void)
 {
+    START_PROFILING;
+
 	for(int i = 0; i < nang*ny*nz*ng; ++i)
 	{
 		flux_i[i] = 0.0;
@@ -164,22 +194,32 @@ void zero_edge_flux_buffers(void)
 	{
 		flux_k[i] = 0.0;
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 void zero_flux_moments_buffer(void)
 {
+    START_PROFILING;
+
 	for(int i = 0; i < cmom*nx*ny*nz*ng; ++i)
 	{
 		scalar_mom[i] = 0.0;
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 void zero_scalar_flux(void)
 {
+    START_PROFILING;
+
 	for(int i = 0; i < nx*ny*nz*ng; ++i)
 	{
 		scalar_flux[i] = 0.0;
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 bool check_convergence(
@@ -190,6 +230,8 @@ bool check_convergence(
 		unsigned int *num_groups_todo, 
 		bool inner)
 {
+    START_PROFILING;
+
 	bool r = true;
 
 	// Reset the do_group list
@@ -251,13 +293,19 @@ bool check_convergence(
 	}
 
 	return r;
+
+    STOP_PROFILING(__func__);
 }
 
 // Copies the value of scalar flux
 void store_scalar_flux(double* to)
 {
+    START_PROFILING;
+
 	for(int i = 0; i < nx*ny*nz*ng; ++i)
 	{
 		to[i] = scalar_flux[i];
 	}
+
+    STOP_PROFILING(__func__);
 }

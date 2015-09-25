@@ -5,6 +5,8 @@
 // Compute the order of the sweep for the first octant
 plane *compute_sweep_order(void)
 {
+    START_PROFILING;
+
     unsigned int nplanes = ichunk + ny + nz - 2;
     plane *planes = (plane *)malloc(sizeof(plane)*nplanes);
     for (unsigned int i = 0; i < nplanes; i++)
@@ -48,6 +50,8 @@ plane *compute_sweep_order(void)
             }
         }
     }
+
+    STOP_PROFILING(__func__);
 
     return planes;
 }
@@ -131,6 +135,8 @@ void sweep_cell(
 		const unsigned int num_groups_todo,
 		const unsigned int num_cells)
 {
+    START_PROFILING;
+
 	for(int a_idx = 0; a_idx < nang; ++a_idx)
 	{
 		for(int tmp_g_idx = 0; tmp_g_idx < num_groups_todo; ++tmp_g_idx)
@@ -249,4 +255,6 @@ void sweep_cell(
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }

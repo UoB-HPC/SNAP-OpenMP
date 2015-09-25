@@ -13,6 +13,8 @@ void ext_initialise_parameters_(
     int *timesteps_, int *outers_, int *inners_,
     double *epsi_, double *tolr_)
 {
+    START_PROFILING;
+
     // Save problem size information to globals
     nx = *nx_;
     ny = *ny_;
@@ -39,6 +41,8 @@ void ext_initialise_parameters_(
 	{
         printf("Warning: nx and ichunk are different - expect the answers to be wrong...\n");
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Argument list:
@@ -66,6 +70,8 @@ void ext_initialise_memory_(
 		int *lma_in,
 		double *g2g_source_in)
 {
+    START_PROFILING;
+
 	// Create zero array for the edge flux buffers
 	// First we need maximum two of nx, ny and nz
 	size_t s = nang * ng;
@@ -141,11 +147,15 @@ void ext_initialise_memory_(
 
 	g2g_source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
 	memcpy(g2g_source, g2g_source_in, sizeof(double)*cmom*nx*ny*nz*ng);
+
+    STOP_PROFILING(__func__);
 }
 
 // Copy the scalar flux value back to the host and transpose
 void ext_get_transpose_scalar_flux_(double *scalar)
 {
+    START_PROFILING;
+
 	// Transpose the data into the original SNAP format
 	for (unsigned int g = 0; g < ng; g++)
 	{
@@ -161,10 +171,14 @@ void ext_get_transpose_scalar_flux_(double *scalar)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 void ext_get_transpose_scalar_moments_(double *scalar_moments)
 {
+    START_PROFILING;
+
 	// Transpose the data into the original SNAP format
 	for (unsigned int g = 0; g < ng; g++)
 	{
@@ -183,11 +197,15 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
 
 // Copy the flux_out buffer back to the host
 void ext_get_transpose_output_flux_(double* output_flux)
 {
+    START_PROFILING;
+
 	double **tmp = (global_timestep % 2 == 0) ? flux_out : flux_in;
 
 	// Transpose the data into the original SNAP format
@@ -211,4 +229,6 @@ void ext_get_transpose_output_flux_(double* output_flux)
 			}
 		}
 	}
+
+    STOP_PROFILING(__func__);
 }
