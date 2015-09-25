@@ -85,12 +85,11 @@ void calc_scattering_cross_section(void)
 // Calculate the outer source
 void calc_outer_source(void)
 {
-	// Not sure if loop order is optimal...
-	for(int i = 0; i < nx; ++i)
+	for(int k = 0; k < nz; ++k)
 	{
 		for(int j = 0; j < ny; ++j)
 		{
-			for(int k = 0; k < nz; ++k)
+			for(int i = 0; i < nx; ++i)
 			{
 				for (unsigned int g1 = 0; g1 < ng; g1++)
 				{
@@ -124,12 +123,11 @@ void calc_outer_source(void)
 // Calculate the inner source
 void calc_inner_source(void)
 {
-	// Not sure if loop order is optimal...
-	for(int i = 0; i < nx; ++i)
+	for(int k = 0; k < nz; ++k)
 	{
 		for(int j = 0; j < ny; ++j)
 		{
-			for(int k = 0; k < nz; ++k)
+			for(int i = 0; i < nx; ++i)
 			{
 				for (unsigned int g = 0; g < ng; g++)
 				{

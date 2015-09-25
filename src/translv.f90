@@ -47,7 +47,7 @@ SUBROUTINE translv
 
   INTEGER(i_knd) :: cy, otno, ierr, g, i, tot_iits, cy_iits, out_iits, o
 
-  REAL(r_knd) :: sf, time, t1, t2, t3, t4, t5, t6, t7, tmp
+  REAL(r_knd) :: sf, time, t1, t2, t3, t4, t5, t6, t7, tmp, ft_start, ft_end
 
   REAL(r_knd), DIMENSION(:,:,:,:,:,:), POINTER :: ptr_tmp
 !_______________________________________________________________________
@@ -151,6 +151,8 @@ SUBROUTINE translv
   IF ( iproc == root ) WRITE( ounit, 201) ( star, i = 1, 80 )
 
   tot_iits = 0
+
+  CALL wtime ( ft_start )
 
   time_loop: DO cy = 1, nsteps
 
@@ -279,6 +281,8 @@ SUBROUTINE translv
   END IF
   IF ( iproc == root ) WRITE( ounit, 211 ) ( star, i = 1, 80 )
 
+  CALL wtime ( ft_end )
+
   CALL wtime ( t7 )
   tslv = t7 - t1
   tmp = REAL( nx, r_knd ) * REAL( ny_gl, r_knd ) * REAL( nz_gl, r_knd )&
@@ -287,6 +291,7 @@ SUBROUTINE translv
   tgrind = tslv*1.0E9_r_knd / tmp
 
   WRITE ( *, 217 ) ( t7-t1 )
+  WRITE ( *, 218 ) ( ft_end-ft_start )
 
 
 !_______________________________________________________________________
@@ -366,6 +371,7 @@ SUBROUTINE translv
   215 FORMAT( 'OpenCL flux reduction time: ', F10.3, 's')
   216 FORMAT( 'OpenCL grind time (for resident sweep): ', F10.3, 'ns')
   217 FORMAT( 'Original time: ', F10.3, 's')
+  218 FORMAT( 'Fortran Runtime: ', F10.3, 's')
 
 !_______________________________________________________________________
 !_______________________________________________________________________

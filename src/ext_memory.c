@@ -149,11 +149,11 @@ void ext_get_transpose_scalar_flux_(double *scalar)
 	// Transpose the data into the original SNAP format
 	for (unsigned int g = 0; g < ng; g++)
 	{
-		for (unsigned int i = 0; i < nx; i++)
+		for (unsigned int k = 0; k < nz; k++)
 		{
 			for (unsigned int j = 0; j < ny; j++)
 			{
-				for (unsigned int k = 0; k < nz; k++)
+				for (unsigned int i = 0; i < nx; i++)
 				{
 					scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] 
 						= scalar_flux[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
@@ -170,11 +170,11 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
 	{
 		for (unsigned int l = 0; l < cmom-1; l++)
 		{
-			for (unsigned int i = 0; i < nx; i++)
+			for (unsigned int k = 0; k < nz; k++)
 			{
 				for (unsigned int j = 0; j < ny; j++)
 				{
-					for (unsigned int k = 0; k < nz; k++)
+					for (unsigned int i = 0; i < nx; i++)
 					{
 						scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] 
 							= scalar_mom[g+(ng*l)+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
@@ -195,11 +195,11 @@ void ext_get_transpose_output_flux_(double* output_flux)
 	{
 		for (int g = 0; g < ng; g++)
 		{
-			for (int i = 0; i < nx; i++)
+			for (int k = 0; k < nz; k++)
 			{
 				for (int j = 0; j < ny; j++)
 				{
-					for (int k = 0; k < nz; k++)
+					for (int i = 0; i < nx; i++)
 					{
 						for (int o = 0; o < noct; o++)
 						{
