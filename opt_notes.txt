@@ -147,3 +147,6 @@ Total elapsed time: 667.749847ms
 
 *************************************************************
 
+Valid input file
+OpenMP - 3.252s vesus 1.076s
+

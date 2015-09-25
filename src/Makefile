@@ -2,18 +2,18 @@
 # Build SNAP
 #
 OPT = yes
-FFLAGS = -O3
+FFLAGS = -O3 -openmp #-mmic
 FFLAG2 =
 
-FORTRAN = mpif90
+FORTRAN = mpiifort
 #FORTRAN = ifort
 #FORTRAN = gfortran
 #FORTRAN = bg-gfortran
 
-#ifeq ($(FORTRAN),ifort)
+TARGET = snap
+
 ifeq ($(FORTRAN),mpif90)
-  TARGET = snap
-  FFLAGS = -O3
+  FFLAGS = -O3 #-mmic
   FFLAG2 =
   ifeq ($(OPT),no)
     TARGET = snap_db
@@ -22,61 +22,18 @@ ifeq ($(FORTRAN),mpif90)
   endif
 endif
 
-CC = mpicc
-CFLAGS = -std=c99 -O3  -vec-report=5
+CC = mpiicc
+CFLAGS = -std=c99 -openmp -O3 #-mmic -traceback
 CFLAGS2 = -lm
 
 # Enables fine grained profiling of C implementation
 ifdef PROFILER
-  CFLAGS=-std=gnu99 -O3 -DENABLE_PROFILING
+  CFLAGS=-std=gnu99 -O3 -DENABLE_PROFILING -openmp
 endif
 
 ifdef TIMING
 	CFLAGS += -DTIMING
 endif
-ifeq ($(shell mpicc --showme:command),gcc)
-	CFLAGS += -fopenmp
-	FFLAGS += -fopenmp
-else
-ifeq ($(shell  mpicc --showme:command),icc)
-	CFLAGS += -openmp
-	FFLAGS += -openmp
-endif
-endif
-
-ifeq ($(shell uname), Darwin)
-	OPENCL = -framework OpenCL
-else
-	OPENCL = -lOpenCL
-endif
-
-#ifeq ($(FORTRAN),gfortran)
-#  TARGET = snapg
-#  FFLAGS = -O3
-#  FFLAG2 =
-#  ifeq ($(OPT),no)
-#    TARGET = snapg_db
-#    FFLAGS = -g -O0 -fbounds-check
-#    FFLAG2 = -fbacktrace
-#  endif
-#endif
-
-#RDIST = no
-#ifeq ($(FORTRAN),bf-gfortran)
-#  TARGET = snap_byfl
-#  FFLAGS = -O3 -bf-all-ops -bf-by-func
-#  FFLAG2 =
-#  ifeq ($(OPT),no)
-#    TARGET = snap_byfl_db
-#    FFLAGS = -O0 -g -fbounds-check -bf-all-ops -bf-by-func
-#    FFLAG2 = -fbacktrace
-#  endif
-#  ifeq ($(RDIST),yes)
-#    TARGET = snap_byfl_r
-#    FFLAGS = -O3 -bf-all-ops -bf-by-func -bf-reuse-dist
-#    FFLAG2 =
-#  endif
-#endif
 
 .SUFFIXES:	.f90 .o
 
