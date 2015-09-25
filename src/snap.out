@@ -1,7 +1,7 @@
  SNAP: SN (Discrete Ordinates) Application Proxy
  Version Number..  1.01 
  Version Date..  03-25-2013
- Ran on  9-25-2015 at time 10:16: 1
+ Ran on  9-25-2015 at time 10:48: 0
 
 ********************************************************************************
 
@@ -188,3 +188,124 @@
      9.08088235E-01   9.19117647E-02   4.08568213E-01
      9.15441176E-01   8.45588235E-02   3.93468242E-01
      9.22794118E-01   7.72058824E-02   3.77478831E-01
+     9.30147059E-01   6.98529412E-02   3.60481644E-01
+     9.37500000E-01   6.25000000E-02   3.42326598E-01
+     9.44852941E-01   5.51470588E-02   3.22818403E-01
+     9.52205882E-01   4.77941176E-02   3.01694680E-01
+     9.59558824E-01   4.04411765E-02   2.78588183E-01
+     9.66911765E-01   3.30882353E-02   2.52956138E-01
+     9.74264706E-01   2.57352941E-02   2.23932975E-01
+     9.81617647E-01   1.83823529E-02   1.89970745E-01
+     9.88970588E-01   1.10294118E-02   1.47700805E-01
+     9.96323529E-01   3.67647059E-03   8.55915201E-02
+
+  Material Map
+    mat_opt = 0   -->   nmat = 1
+    Base material (default for every cell) = 1
+
+  Source Map
+    src_opt = 0
+    Source strength per cell (where applied) = 1.0
+    Source map:
+        Starting cell: (     1,     1,     1 )
+        Ending cell:   (    16,    16,    16 )
+
+  Pseudo Cross Sections Data
+    ng =  10
+
+    Material 1
+    Group         Total         Absorption      Scattering
+       1       1.000000E+00    5.000000E-01    5.000000E-01
+       2       1.010000E+00    5.050000E-01    5.050000E-01
+       3       1.020000E+00    5.100000E-01    5.100000E-01
+       4       1.030000E+00    5.150000E-01    5.150000E-01
+       5       1.040000E+00    5.200000E-01    5.200000E-01
+       6       1.050000E+00    5.250000E-01    5.250000E-01
+       7       1.060000E+00    5.300000E-01    5.300000E-01
+       8       1.070000E+00    5.350000E-01    5.350000E-01
+       9       1.080000E+00    5.400000E-01    5.400000E-01
+      10       1.090000E+00    5.450000E-01    5.450000E-01
+
+  Time-Dependent Calculation Data
+    tf =  1.0000E+00
+    nsteps =    1
+    dt =  1.0000E+00
+
+    Group        Speed
+       1       1.0000E+01
+       2       9.0000E+00
+       3       8.0000E+00
+       4       7.0000E+00
+       5       6.0000E+00
+       6       5.0000E+00
+       7       4.0000E+00
+       8       3.0000E+00
+       9       2.0000E+00
+      10       1.0000E+00
+
+  Solution Control Parameters
+    epsi =  1.0000E-05
+    iitm =   1
+    oitm =    1
+    timedep = 1
+    it_det = 0
+    fluxp = 0
+    fixup = 1
+
+
+  Parallelization Parameters
+    npey =     1
+    npez =     1
+    nthreads =    4
+
+          Thread Support Level
+           0 - MPI_THREAD_SINGLE
+           1 - MPI_THREAD_FUNNELED
+           2 - MPI_THREAD_SERIALIZED
+           3 - MPI_THREAD_MULTIPLE
+    thread_level =  0
+
+    .FALSE. nested threading
+      nnested =    0
+
+********************************************************************************
+
+          Iteration Monitor
+********************************************************************************
+
+ ******************************
+  Time Cycle   1
+  Outer
+    1    Dfmxo= 8.1180E-01    No. Inners=   10
+
+  ***UNCONVERGED*** Stopping Iterations!!
+  Cycle=   1    Time= 5.0000E-01    No. Outers=   2    No. Inners=   10
+
+
+ ******************************
+  Total inners for all time steps, outers =     10
+
+********************************************************************************
+
+          Timing Summary
+********************************************************************************
+
+  Code Section                          Time (seconds)
+ **************                        ****************
+    Parallel Setup                       1.2519E-03
+    Input                                2.0599E-04
+    Setup                                1.3189E-03
+    Solve                                3.7670E+00
+       Parameter Setup                   1.3438E-01
+       Outer Source                      1.2012E-03
+       Inner Iterations                  3.7024E-01
+          Inner Source                   2.2411E-04
+          Transport Sweeps               3.6989E-01
+          Inner Misc Ops                 1.2398E-04
+       Solution Misc Ops                 3.2612E+00
+    Output                               0.0000E+00
+  Total Execution time                   4.7884E+00
+
+  Grind Time (nanoseconds)         8.4529E+01
+
+********************************************************************************

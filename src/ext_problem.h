@@ -61,7 +61,7 @@ double* lma;
 double* g2g_source;
 double* scalar_mom;
 double* scat_cs;
-int* groups_todo;
+unsigned int* groups_todo;
 
 // Global variable for the timestep
 unsigned int global_timestep;

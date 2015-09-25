@@ -106,11 +106,7 @@ void ext_initialise_memory_(
 	flux_i = malloc(sizeof(double)*nang*ny*nz*ng);
 	flux_j = malloc(sizeof(double)*nang*nx*nz*ng);
 	flux_k = malloc(sizeof(double)*nang*nx*ny*ng);
-
 	zero_edge_flux_buffers();
-
-	dd_j = malloc(sizeof(double)*nang);
-	dd_k = malloc(sizeof(double)*nang);
 
 	scalar_mom = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
 	zero_flux_moments_buffer();
@@ -118,6 +114,8 @@ void ext_initialise_memory_(
 	scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
 	zero_scalar_flux();
 
+	dd_j = malloc(sizeof(double)*nang);
+	dd_k = malloc(sizeof(double)*nang);
 	total_cross_section = malloc(sizeof(double)*nx*ny*nz*ng);
 	scat_cs = malloc(sizeof(double)*nmom*nx*ny*nz*ng);
 	denom = malloc(sizeof(double)*nang*nx*ny*nz*ng);
@@ -190,7 +188,7 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
 // Copy the flux_out buffer back to the host
 void ext_get_transpose_output_flux_(double* output_flux)
 {
-	double *tmp = (global_timestep % 2 == 0) ? flux_out[0] : flux_in[0];
+	double **tmp = (global_timestep % 2 == 0) ? flux_out : flux_in;
 
 	// Transpose the data into the original SNAP format
 	for (int a = 0; a < nang; a++)
@@ -206,7 +204,7 @@ void ext_get_transpose_output_flux_(double* output_flux)
 						for (int o = 0; o < noct; o++)
 						{
 							output_flux[a+(nang*i)+(nang*nx*j)+(nang*nx*ny*k)+(nang*nx*ny*nz*o)+(nang*nx*ny*nz*noct*g)] 
-								= tmp[a+(nang*g)+(nang*ng*i)+(nang*ng*nx*j)+(nang*ng*nx*ny*k)+(nang*ng*nx*ny*nz*o)];
+								= tmp[o][a+(nang*g)+(nang*ng*i)+(nang*ng*nx*j)+(nang*ng*nx*ny*k)];
 						}
 					}
 				}

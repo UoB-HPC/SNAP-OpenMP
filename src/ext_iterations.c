@@ -10,7 +10,6 @@ void ext_iterations_(void)
 	double *old_outer_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
 	double *old_inner_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
 	double *new_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
-	unsigned int *groups_todo = malloc(sizeof(unsigned int)*ng);
 
 	unsigned int num_groups_todo;
 	bool outer_done;
@@ -179,7 +178,7 @@ void ext_reduce_angular_(void)
 							{
 								for(int o = 0; o < noct; ++o)
 								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
+									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
 								}
 							}
 						}
@@ -194,7 +193,7 @@ void ext_reduce_angular_(void)
 							{
 								for(int o = 0; o < noct; ++o)
 								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(o,a,g,i,j,k);
+									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * angular(o,a,g,i,j,k);
 								}
 							}
 						}
