@@ -23,7 +23,7 @@ ichunk=16
 
 nmom=2
 nang=136
-ng=10
+ng=50
 
 mat_opt=0
 src_opt=0

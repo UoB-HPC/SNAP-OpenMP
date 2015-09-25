@@ -148,66 +148,80 @@ void ext_reduce_angular_(void)
 	double** angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
 	double** angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-	for(int k = 0; k < nz; ++k)
-	{
-		for(int j = 0; j < ny; ++j)
-		{
-			for(int i = 0; i < nx; ++i)
-			{
-				// For groups
-				for (unsigned int g = 0; g < ng; g++)
-				{
-					double tot_g = 0.0;
-					for (unsigned int l = 0; l < cmom-1; l++)
-					{
-						scalar_mom(g,l,i,j,k) = 0.0;
-					}
+#pragma omp parallel for
+    for(int i = 0; i < nx; ++i)
+    {
+        for(int j = 0; j < ny; ++j)
+        {
+            for(int k = 0; k < nz; ++k)
+            {
+                for (unsigned int g = 0; g < ng; g++)
+                {
+                    for (unsigned int l = 0; l < cmom-1; l++)
+                    {
+                        scalar_mom(g,l,i,j,k) = 0.0;
+                    }
+                }
+            }
+        }
+    }
 
-					// For angles
-					for (unsigned int a = 0; a < nang; a++)
-					{
-						// NOTICE: we do the reduction with psi, not ptr_out.
-						// This means that (line 307) the time dependant
-						// case isnt the value that is summed, but rather the
-						// flux in the cell
-						// Note all work items will all take the same branch
-						if (time_delta(g) != 0.0)
-						{
-							for(int o = 0; o < noct; ++o)
-							{
-								tot_g += weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
-							}
+#pragma omp parallel for
+    for(int i = 0; i < nx; ++i)
+    {
+        for(int j = 0; j < ny; ++j)
+        {
+            for(int k = 0; k < nz; ++k)
+            {
+                for (unsigned int g = 0; g < ng; g++)
+                {
+                    double tot_g = 0.0;
 
-							for (unsigned int l = 0; l < (cmom-1); l++)
-							{
-								for(int o = 0; o < noct; ++o)
-								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
-								}
-							}
-						}
-						else
-						{
-							for(int o = 0; o < noct; ++o)
-							{
-								tot_g += weights(a) * angular(o,a,g,i,j,k);
-							}
+                    for (unsigned int a = 0; a < nang; a++)
+                    {
+                        // NOTICE: we do the reduction with psi, not ptr_out.
+                        // This means that (line 307) the time dependant
+                        // case isnt the value that is summed, but rather the
+                        // flux in the cell
+                        if (time_delta(g) != 0.0)
+                        {
+                            for(int o = 0; o < noct; ++o)
+                            {
+                                tot_g += weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
+                            }
 
-							for (unsigned int l = 0; l < (cmom-1); l++)
-							{
-								for(int o = 0; o < noct; ++o)
-								{
-									scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * angular(o,a,g,i,j,k);
-								}
-							}
-						}
-					}
+                            for (unsigned int l = 0; l < (cmom-1); l++)
+                            {
+                                for(int o = 0; o < noct; ++o)
+                                {
+                                    scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * 
+                                        (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for(int o = 0; o < noct; ++o)
+                            {
+                                tot_g += weights(a) * angular(o,a,g,i,j,k);
+                            }
 
-					scalar_flux(g,i,j,k) = tot_g;
-				}
-			}
-		}
-	}
+                            for (unsigned int l = 0; l < (cmom-1); l++)
+                            {
+                                for(int o = 0; o < noct; ++o)
+                                {
+                                    scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * angular(o,a,g,i,j,k);
+                                }
+                            }
+                        }
+                    }
+
+                    scalar_flux(g,i,j,k) = tot_g;
+                }
+            }
+        }
+    }
 
     STOP_PROFILING(__func__);
 }
+

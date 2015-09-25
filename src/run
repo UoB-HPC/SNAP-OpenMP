@@ -1,1 +1,1 @@
-mpirun -n 1 ./snap snap.in snap.out
+OMP_NUM_THREADS=16 KMP_AFFINITY=compact mpirun -n 1 ./snap snap.in snap.out
