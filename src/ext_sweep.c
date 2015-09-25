@@ -137,7 +137,7 @@ void sweep_cell(
 {
     START_PROFILING;
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(1)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
