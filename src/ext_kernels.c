@@ -45,9 +45,7 @@ void calc_dd_coefficients(void)
 }
 
 // Calculate the total cross section from the spatial mapping
-void calc_total_cross_section(
-		const double * restrict xs,
-		double * restrict total_cross_section)
+void calc_total_cross_section(void)
 {
 	for(unsigned int g = 0; g < ng; ++g)
 	{
@@ -172,7 +170,7 @@ void zero_edge_flux_buffers(void)
 
 void zero_flux_moments_buffer(void)
 {
-	for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
+	for(int i = 0; i < cmom*nx*ny*nz*ng; ++i)
 	{
 		scalar_mom[i] = 0.0;
 	}

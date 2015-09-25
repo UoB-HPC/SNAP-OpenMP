@@ -43,6 +43,7 @@ void ext_iterations_(void)
 
 			num_groups_todo = ng;
 			tot_outers++;
+
 			calc_total_cross_section();
 			calc_scattering_cross_section();
 			calc_dd_coefficients();

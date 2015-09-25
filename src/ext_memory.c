@@ -50,25 +50,21 @@ void ext_initialise_parameters_(
 // mu(nang) is x-direction cosines
 // scat_coef [ec](nang,cmom,noct) - Scattering expansion coefficients
 // time_delta [vdelt](ng)              - time-absorption coefficient
-// total_cross_section [t_xs](nx,ny,nz,ng)       - Total cross section on mesh
-// flux_in(nang,nx,ny,nz,noct,ng)   - Incoming time-edge flux pointer
 // denom(nang,nx,ny,nz,ng) - Sweep denominator, pre-computed/inverted
 // weights(nang) - angle weights for scalar reduction
 void ext_initialise_memory_(
-		double *mu, 
-		double *eta, 
-		double *xi,
-		double *scat_coef,
-		double *total_cross_section,
-		double *weights,
-		double *velocity,
-		double *xs,
-		int *mat,
-		double *fixed_source,
-		double *gg_cs,
-		int *lma,
-		double *g2g_source,
-		double *f_flux_in)
+		double *mu_in, 
+		double *eta_in, 
+		double *xi_in,
+		double *scat_coeff_in,
+		double *weights_in,
+		double *velocity_in,
+		double *xs_in,
+		int *mat_in,
+		double *fixed_source_in,
+		double *gg_cs_in,
+		int *lma_in,
+		double *g2g_source_in)
 {
 	// Create zero array for the edge flux buffers
 	// First we need maximum two of nx, ny and nz
@@ -86,7 +82,6 @@ void ext_initialise_memory_(
 		s *= nx * ny;
 	}
 
-	zero_edge = (double *)calloc(sizeof(double), s);
 	flux_in = (double**)malloc(sizeof(double*)*noct);
 	flux_out = (double**)malloc(sizeof(double*)*noct);
 
@@ -116,40 +111,38 @@ void ext_initialise_memory_(
 
 	dd_j = malloc(sizeof(double)*nang);
 	dd_k = malloc(sizeof(double)*nang);
-	mu = malloc(sizeof(double)*nang);
-	eta = malloc(sizeof(double)*nang);
-	xi = malloc(sizeof(double)*nang);
-	scat_coeff = malloc(sizeof(double)*nang*cmom*noct);
-	total_cross_section = malloc(sizeof(double)*nx*ny*nz*ng);
-	xs = malloc(sizeof(double)*nmat*ng);
-	map = malloc(sizeof(int)*nx*ny*nz);
-	fixed_source = malloc(sizeof(double)*nx*ny*nz*ng);
-	gg_cs = malloc(sizeof(double)*nmat*nmom*ng*ng);
-	lma = malloc(sizeof(double)*nmom);
-	g2g_source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
 
-	if (cmom == 1)
-	{
-		scalar_mom = malloc(sizeof(double)*nx*ny*nz*ng);
-	}
-	else
-	{
-		scalar_mom = malloc(sizeof(double)*nx*ny*nz*ng);
-	}
-
+	scalar_mom = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
 	zero_flux_moments_buffer();
 
+	scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
+	zero_scalar_flux();
+
+	total_cross_section = malloc(sizeof(double)*nx*ny*nz*ng);
 	scat_cs = malloc(sizeof(double)*nmom*nx*ny*nz*ng);
-	weights = malloc(sizeof(double)*nang);
 	denom = malloc(sizeof(double)*nang*nx*ny*nz*ng);
 	source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
 	time_delta = malloc(sizeof(double)*ng);
-	velocity = malloc(sizeof(double)*ng);
-	scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
-
-	zero_scalar_flux();
-
 	groups_todo = malloc(sizeof(unsigned int)*ng);
+
+	// Read-only buffers initialised in Fortran code
+	mu = mu_in;
+	eta = eta_in;
+	xi = xi_in;
+	scat_coeff = scat_coeff_in;
+	weights = weights_in;
+	velocity = velocity_in;
+	map = mat_in;
+	fixed_source = fixed_source_in;
+	gg_cs = gg_cs_in;
+	lma = lma_in;
+
+	// Buffers copied in from Fortran
+	xs = malloc(sizeof(double)*nmat*ng);
+	memcpy(xs, xs_in, sizeof(double)*nmat*ng);
+
+	g2g_source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
+	memcpy(g2g_source, g2g_source_in, sizeof(double)*cmom*nx*ny*nz*ng);
 }
 
 // Copy the scalar flux value back to the host and transpose
@@ -164,7 +157,8 @@ void ext_get_transpose_scalar_flux_(double *scalar)
 			{
 				for (unsigned int k = 0; k < nz; k++)
 				{
-					scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] = scalar_flux[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
+					scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] 
+						= scalar_flux[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
 				}
 			}
 		}

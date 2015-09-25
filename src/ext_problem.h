@@ -63,10 +63,5 @@ double* scalar_mom;
 double* scat_cs;
 int* groups_todo;
 
-// Create an empty buffer to zero out the edge flux arrays
-// Each direction can share it as we make sure that it is
-// big enough for each of them
-double *zero_edge;
-
 // Global variable for the timestep
 unsigned int global_timestep;
