@@ -124,10 +124,9 @@ SUBROUTINE translv
 
   CALL ext_initialise_parameters ( nx, ny_gl, nz_gl, ng, nang, noct, &
       cmom, nmom, ichunk, dx, dy, dz, dt, nmat, nsteps, oitm, iitm, epsi, tolr )
-  !CALL ext_initialise_memory ( mu, eta, xi, ec, t_xs, w, v, sigt, mat, &
-      !qi, slgg, lma, q2grp, ptr_in )
-  CALL ext_initialise_memory ( mu, eta, xi, ec, w, v, sigt, mat, &
-      qi, slgg, lma, q2grp)
+
+  !CALL ext_initialise_memory ( mu, eta, xi, ec, w, v, sigt, mat, &
+  !    qi, slgg, lma, q2grp)
 
   CALL wtime ( ocl_first_copy_toc )
 
@@ -138,7 +137,7 @@ SUBROUTINE translv
 !   Run the iterations
 !_______________________________________________________________________
 
-  CALL ext_iterations
+  CALL ext_solve( mu, eta, xi, ec, w, v, sigt, mat, qi, slgg, lma)
 
 !_______________________________________________________________________
 !

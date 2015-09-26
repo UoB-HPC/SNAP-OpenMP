@@ -1,35 +1,34 @@
 #
 # Build SNAP
 #
-OPT = yes
-FFLAGS = -O3
-FFLAG2 =
-OPENMP = -qopenmp
-TARGET = snap
+
+# User defined parameters
+DBG 	= yes
+NATIVE 	= no
+COPTION = 
+FOPTION = 
+OPENMP 	= -qopenmp
+TARGET 	= snap
+CC 		= mpiicc
+FORTRAN = mpiifort
 
 # Enables native compilation
-ifdef NATIVE
+ifeq ($(NATIVE), yes)
   MIC=-mmic
 endif
 
-FORTRAN = mpiifort
-#FORTRAN = ifort
-#FORTRAN = gfortran
-#FORTRAN = bg-gfortran
-
-ifeq ($(FORTRAN),mpiifort)
-  FFLAGS = -O3 $(OPENMP) $(MIC)
-  FFLAG2 =
-  ifeq ($(OPT),no)
-    TARGET = snap_db
-    FFLAGS = -g -O0 -check bounds -traceback $(OPENMP) $(MIC)
-    FFLAG2 =
-  endif
+# Enables debugging mode
+ifeq ($(DBG),yes)
+  #TARGET = snap_db
+  FFLAGS = -g -O0 -check bounds -traceback $(OPENMP) $(MIC) $(FOPTION)
+  CFLAGS = -g -O0 -debug all -traceback $(OPENMP) $(MIC) $(COPTION)
+else
+  FFLAGS = -O3 $(MIC) $(OPENMP)
+  CFLAGS = -O3 $(MIC) $(OPENMP)
 endif
 
-CC = mpiicc
-CFLAGS = -O3 $(MIC) #$(OPENMP)
 CFLAGS2 = -lm
+FFLAG2 =
 
 # Enables fine grained profiling of C implementation
 ifdef PROFILER
@@ -49,7 +48,7 @@ OBJS = global.o snap_main.o utils.o version.o plib.o geom.o sn.o \
        outer.o expxs.o inner.o sweep.o octsweep.o dim1_sweep.o dim3_sweep.o \
        output.o time.o mms.o $(EXT_OBJS)
 
-EXT_OBJS = ext_sweep.o ext_memory.o ext_iterations.o ext_kernels.o ext_profiler.o
+EXT_OBJS = ext_sweep.o ext_core.o ext_kernels.o ext_profiler.o
 
 SRCS = global.f90 snap_main.f90 utils.f90 version.f90 plib.f90 geom.f90 \
        sn.f90 data.f90 control.f90 input.f90 setup.f90 dealloc.f90 \

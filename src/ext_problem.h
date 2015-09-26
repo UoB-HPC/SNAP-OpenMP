@@ -1,13 +1,6 @@
 #pragma once
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
-#include <omp.h>
-#include "ext_profiler.h"
-
+#pragma omp declare target
 
 // This file contains a list of the global problem variables
 // such as grid size, angles, energy groups, etc.
@@ -56,7 +49,7 @@ double* weights;
 double* velocity;
 double* scalar_flux;
 double* xs;
-int* map;
+int* mat;
 double* fixed_source;
 double* gg_cs;
 int* lma;
@@ -67,3 +60,5 @@ unsigned int* groups_todo;
 
 // Global variable for the timestep
 unsigned int global_timestep;
+
+#pragma omp end declare target

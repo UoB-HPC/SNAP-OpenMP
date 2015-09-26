@@ -26,7 +26,7 @@
 
 #define velocity(g) velocity[(g)]
 
-#define map(i,j,k) map[(i)+(nx*(j))+(nx*ny*(k))]
+#define mat(i,j,k) mat[(i)+(nx*(j))+(nx*ny*(k))]
 #define xs(i,g) xs[(i)+(nmat*(g))]
 
 #define g2g_source(m,i,j,k,g) g2g_source[(m)+(cmom*(i))+(cmom*nx*(j))+(cmom*nx*ny*(k))+(cmom*nx*ny*nz*(g))]

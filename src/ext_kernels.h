@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdbool.h>
+
+#pragma omp declare target
+
 void zero_edge_flux_buffers(void);
 void zero_flux_moments_buffer(void);
 void zero_scalar_flux(void);
@@ -21,3 +25,4 @@ bool check_convergence(
 		unsigned int *num_groups_todo, 
 		bool inner);
 
+#pragma omp end declare target

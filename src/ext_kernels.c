@@ -1,5 +1,10 @@
+#include <stdbool.h>
+#include <math.h>
+
 #include "ext_sweep.h"
-#include "ext_shared.h"
+#include "ext_macros.h"
+#include "ext_problem.h"
+#include "ext_profiler.h"
 
 // Calculate the inverted denominator for all the energy groups
 void calc_denominator(void)
@@ -62,6 +67,7 @@ void calc_total_cross_section(void)
 {
     START_PROFILING;
 
+#pragma omp parallel for
     for (unsigned int k = 0; k < nz; k++)
     {
         for (unsigned int j = 0; j < ny; j++)
@@ -70,7 +76,7 @@ void calc_total_cross_section(void)
             {
                 for(unsigned int g = 0; g < ng; ++g)
                 {
-                    total_cross_section(g,i,j,k) = xs(map(i,j,k)-1,g);
+                    total_cross_section(g,i,j,k) = xs(mat(i,j,k)-1,g);
                 }
             }
         }
@@ -83,6 +89,7 @@ void calc_scattering_cross_section(void)
 {
     START_PROFILING;
 
+#pragma omp parallel for
     for(unsigned int g = 0; g < ng; ++g)
     {
         for (unsigned int k = 0; k < nz; k++)
@@ -93,7 +100,7 @@ void calc_scattering_cross_section(void)
                 {
                     for (unsigned int l = 0; l < nmom; l++)
                     {
-                        scat_cs(l,i,j,k,g) = gg_cs(map(i,j,k)-1,l,g,g);
+                        scat_cs(l,i,j,k,g) = gg_cs(mat(i,j,k)-1,l,g,g);
                     }
                 }
             }
@@ -126,14 +133,14 @@ void calc_outer_source(void)
                             continue;
                         }
 
-                        g2g_source(0,i,j,k,g1) += gg_cs(map(i,j,k)-1,0,g2,g1) * scalar_flux(g2,i,j,k);
+                        g2g_source(0,i,j,k,g1) += gg_cs(mat(i,j,k)-1,0,g2,g1) * scalar_flux(g2,i,j,k);
 
                         unsigned int mom = 1;
                         for (unsigned int l = 1; l < nmom; l++)
                         {
                             for (int m = 0; m < lma(l); m++)
                             {
-                                g2g_source(mom,i,j,k,g1) += gg_cs(map(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
+                                g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
                                 mom++;
                             }
                         }

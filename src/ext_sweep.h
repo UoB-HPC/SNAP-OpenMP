@@ -1,7 +1,5 @@
 #pragma once
 
-#include "ext_problem.h"
-
 struct cell 
 {
     unsigned int i,j,k;
@@ -15,6 +13,8 @@ typedef struct
     // index is an index into the cells array for when storing the cell indexes
     unsigned int index;
 } plane;
+
+#pragma omp declare target
 
 plane *compute_sweep_order(void);
 
@@ -40,3 +40,4 @@ void sweep_cell(
 		const unsigned int num_groups_todo,
 		const unsigned int num_cells);
 
+#pragma omp declare target
