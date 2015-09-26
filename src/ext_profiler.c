@@ -10,11 +10,15 @@
 #define NS_MS 1000000.0
 #define _PROFILER_MAX_KERNELS 2048
 
+#pragma omp declare target
+
 // Internal variables
 struct timespec _profiler_start;
 struct timespec _profiler_end;
 unsigned int _profiler_kernelcount = 0;
 profile _profiler_entries[_PROFILER_MAX_KERNELS];
+
+#pragma omp end declare target
 
 // Internally start the profiling timer
 void _profiler_start_timer()

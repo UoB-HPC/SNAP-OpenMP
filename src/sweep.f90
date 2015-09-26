@@ -28,7 +28,7 @@ MODULE sweep_module
     nproc, nthreads, thread_level, thread_serialized, thread_multiple, &
     num_grth, plock_omp
 
-  USE time_module, ONLY: wtime, ocl_sweep_time, ocl_reduc_time
+  USE time_module, ONLY: wtime, ext_sweep_time, ext_reduc_time
 
   IMPLICIT NONE
 
@@ -275,7 +275,7 @@ MODULE sweep_module
 !_______________________________________________________________________
 
     !CALL wtime ( t1 )
-    !CALL ocl_sweep
+    !CALL ext_sweep
     !CALL wtime ( t2 )
     !CALL ext_reduce_angular
     !CALL wtime ( t3 )
@@ -283,8 +283,8 @@ MODULE sweep_module
     !PRINT *, "OCL sweep", t2-t1
     !PRINT *, "OCL reduction", t3-t2
     !PRINT *, "ORIG", t1-t0
-    !ocl_sweep_time = ocl_sweep_time + t3 - t1
-    !ocl_reduc_time = ocl_reduc_time + t3 - t2
+    !ext_sweep_time = ext_sweep_time + t3 - t1
+    !ext_reduc_time = ext_reduc_time + t3 - t2
 !_______________________________________________________________________
 !_______________________________________________________________________
 

@@ -33,7 +33,7 @@ SUBROUTINE translv
   USE outer_module, ONLY: outer
 
   USE time_module, ONLY: tslv, wtime, tgrind, tparam,                  &
-    ocl_copy_time, ocl_sweep_time, ocl_reduc_time
+    ext_copy_time, ext_sweep_time, ext_reduc_time
 
   IMPLICIT NONE
 !_______________________________________________________________________
@@ -52,15 +52,15 @@ SUBROUTINE translv
   REAL(r_knd), DIMENSION(:,:,:,:,:,:), POINTER :: ptr_tmp
 !_______________________________________________________________________
 !
-!   Local memory for the OpenCL sweep result
+!   Local memory for the EXT sweep result
 !_______________________________________________________________________
 
-    REAL(r_knd) :: ocl_first_copy_tic, ocl_first_copy_toc
-    REAL(r_knd) :: ocl_update_tic, ocl_update_toc
-    REAL(r_knd), DIMENSION(:,:,:,:,:,:), POINTER :: ocl_angular_flux
+    REAL(r_knd) :: ext_first_copy_tic, ext_first_copy_toc
+    REAL(r_knd) :: ext_update_tic, ext_update_toc
+    REAL(r_knd), DIMENSION(:,:,:,:,:,:), POINTER :: ext_angular_flux
     REAL(r_knd), DIMENSION(:,:,:,:), POINTER :: scalar_flux
     REAL(r_knd), DIMENSION(:,:,:,:,:), POINTER :: scalar_flux_moments
-    ALLOCATE( ocl_angular_flux(nang,nx,ny_gl,nz_gl,noct,ng) )
+    ALLOCATE( ext_angular_flux(nang,nx,ny_gl,nz_gl,noct,ng) )
     ALLOCATE( scalar_flux(nx,ny_gl,nz_gl,ng) )
     ALLOCATE( scalar_flux_moments((cmom-1),nx,ny_gl,nz_gl,ng) )
 !_______________________________________________________________________
@@ -120,7 +120,7 @@ SUBROUTINE translv
 !   Initialise the problem parameters and allocate memory
 !_______________________________________________________________________
 
-  CALL wtime ( ocl_first_copy_tic )
+  CALL wtime ( ext_first_copy_tic )
 
   CALL ext_initialise_parameters ( nx, ny_gl, nz_gl, ng, nang, noct, &
       cmom, nmom, ichunk, dx, dy, dz, dt, nmat, nsteps, oitm, iitm, epsi, tolr )
@@ -128,9 +128,9 @@ SUBROUTINE translv
   !CALL ext_initialise_memory ( mu, eta, xi, ec, w, v, sigt, mat, &
   !    qi, slgg, lma, q2grp)
 
-  CALL wtime ( ocl_first_copy_toc )
+  CALL wtime ( ext_first_copy_toc )
 
-  WRITE ( *, 212 ) ( ocl_first_copy_toc-ocl_first_copy_tic )
+  WRITE ( *, 212 ) ( ext_first_copy_toc-ext_first_copy_tic )
 
 !_______________________________________________________________________
 !
@@ -298,14 +298,14 @@ SUBROUTINE translv
 !   Check angular flux difference
 !_______________________________________________________________________
 
-  CALL ext_get_transpose_output_flux ( ocl_angular_flux )
+  CALL ext_get_transpose_output_flux ( ext_angular_flux )
   PRINT *
   PRINT *, "Checking angular flux"
-  PRINT *, "Max difference out:", MAXVAL ( ABS ( ptr_out-ocl_angular_flux ) )
-  PRINT *, "Max difference in:", MAXVAL ( ABS ( ptr_in-ocl_angular_flux ) )
+  PRINT *, "Max difference out:", MAXVAL ( ABS ( ptr_out-ext_angular_flux ) )
+  PRINT *, "Max difference in:", MAXVAL ( ABS ( ptr_in-ext_angular_flux ) )
   PRINT *
 
-  PRINT *, "OCL SUM", SUM ( ocl_angular_flux )
+  PRINT *, "OCL SUM", SUM ( ext_angular_flux )
   PRINT *, "ORIG SUM", SUM ( ptr_out )
 
 
@@ -339,7 +339,7 @@ SUBROUTINE translv
   PRINT *, "Max error:", MAXVAL ( ABS ( scalar_flux_moments - fluxm ) )
   PRINT *
 
-  DEALLOCATE ( ocl_angular_flux )
+  DEALLOCATE ( ext_angular_flux )
   DEALLOCATE ( scalar_flux )
   DEALLOCATE ( scalar_flux_moments )
 
@@ -364,11 +364,11 @@ SUBROUTINE translv
   211 FORMAT( /, 80A, / )
 
 !_______________________________________________________________________
-  212 FORMAT( 'OpenCL buffer init time: ', F10.3, 's' )
+  212 FORMAT( 'EXT buffer init time: ', F10.3, 's' )
   213 FORMAT( 'Time spent copying updated source: ', F10.3, 's')
-  214 FORMAT( 'OpenCL sweeps + scalar reduction: ', F10.3, 's')
-  215 FORMAT( 'OpenCL flux reduction time: ', F10.3, 's')
-  216 FORMAT( 'OpenCL grind time (for resident sweep): ', F10.3, 'ns')
+  214 FORMAT( 'EXT sweeps + scalar reduction: ', F10.3, 's')
+  215 FORMAT( 'EXT flux reduction time: ', F10.3, 's')
+  216 FORMAT( 'EXT grind time (for resident sweep): ', F10.3, 'ns')
   217 FORMAT( 'Original time: ', F10.3, 's')
   218 FORMAT( 'Fortran Runtime: ', F10.3, 's')
 

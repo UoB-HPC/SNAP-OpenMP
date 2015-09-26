@@ -91,8 +91,9 @@ void sweep_octant(
     int jstep = (yhi == ny) ? -1 : 1;
     int kstep = (zhi == nz) ? -1 : 1;
 
-	double* l_flux_in = (timestep % 2 == 0) ? flux_in[oct] : flux_out[oct];
-	double* l_flux_out = (timestep % 2 == 0) ? flux_out[oct] : flux_in[oct];
+    size_t offset = oct*nang*nx*ny*nz*ng;
+	double* l_flux_in = (timestep % 2 == 0 ? flux_in : flux_out) + offset;
+	double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in) + offset;
 
 	for (unsigned int d = 0; d < ndiag; d++)
 	{

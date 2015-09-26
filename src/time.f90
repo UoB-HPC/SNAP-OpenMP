@@ -41,7 +41,7 @@ MODULE time_module
     tslv=zero, tparam=zero, totrsrc=zero, tinners=zero, tinrsrc=zero,  &
     tsweeps=zero, tinrmisc=zero, tslvmisc=zero, tout=zero, tgrind=zero
 
-  REAL(r_knd) :: ocl_copy_time=zero, ocl_sweep_time=zero, ocl_reduc_time=zero
+  REAL(r_knd) :: ext_copy_time=zero, ext_sweep_time=zero, ext_reduc_time=zero
 
   INCLUDE 'mpif.h'
 

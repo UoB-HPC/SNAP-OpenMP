@@ -18,10 +18,12 @@
         char name[_PROFILER_MAX_NAME];
     } profile;
     
+#pragma omp declare target
     // Internal methods
     void _profiler_start_timer();
     void _profiler_end_timer(const char* kernel_name);
     void _profiler_print_results();
+#pragma omp end declare target
 
 #else
 

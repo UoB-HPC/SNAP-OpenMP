@@ -1,3 +1,7 @@
+#ifndef OFFLOAD
+    #define OFFLOAD 0
+#endif
+
 // Entry point for completing the solve
 void ext_solve_(
 		double *mu, 

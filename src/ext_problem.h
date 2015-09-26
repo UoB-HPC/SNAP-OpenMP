@@ -30,8 +30,8 @@ double tolr;
 
 // Data
 double* source;
-double** flux_in;
-double** flux_out;
+double* flux_in;
+double* flux_out;
 double* flux_i;
 double* flux_j;
 double* flux_k;

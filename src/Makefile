@@ -3,8 +3,8 @@
 #
 
 # User defined parameters
-DBG 	= yes
-NATIVE 	= no
+DBG 	= no
+MICMODE = offload
 COPTION = 
 FOPTION = 
 OPENMP 	= -qopenmp
@@ -12,9 +12,11 @@ TARGET 	= snap
 CC 		= mpiicc
 FORTRAN = mpiifort
 
-# Enables native compilation
-ifeq ($(NATIVE), yes)
-  MIC=-mmic
+# Enables native or offload compilation
+ifeq ($(MICMODE), native)
+  MIC = -mmic
+else ifeq ($(MICMODE), offload)
+  MIC = -DOFFLOAD=1
 endif
 
 # Enables debugging mode

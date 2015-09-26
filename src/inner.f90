@@ -25,7 +25,7 @@ MODULE inner_module
 
   USE sweep_module, ONLY: sweep
 
-  USE time_module, ONLY: tinrsrc, tsweeps, wtime, ocl_copy_time
+  USE time_module, ONLY: tinrsrc, tsweeps, wtime, ext_copy_time
 
   USE plib_module, ONLY: glmax, comm_snap, iproc, root
 

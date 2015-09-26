@@ -21,8 +21,8 @@
 #define scalar_flux(g,i,j,k) scalar_flux[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define weights(a) weights[(a)]
 
-#define angular(o,a,g,i,j,k) angular[o][(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
-#define angular_prev(o,a,g,i,j,k) angular_prev[o][(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
+#define angular(o,a,g,i,j,k) angular[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
+#define angular_prev(o,a,g,i,j,k) angular_prev[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
 
 #define velocity(g) velocity[(g)]
 

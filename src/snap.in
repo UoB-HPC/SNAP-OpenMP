@@ -12,11 +12,11 @@ npez=1
 
 ndimen=3
 
-nx=8
+nx=16
 lx=4.8
-ny=8
+ny=16
 ly=4.8
-nz=8
+nz=16
 lz=4.8
 
 ichunk=16
