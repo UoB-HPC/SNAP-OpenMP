@@ -4,7 +4,7 @@
 
 # User defined parameters
 DBG 	 = no
-MIC_MODE = #offload
+MIC_MODE = offload
 PROFILER = yes
 COPTION  = 
 FOPTION  = 

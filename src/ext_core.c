@@ -31,7 +31,7 @@ void ext_solve_(
 
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
         map(to: mu[:nang], eta[:nang], xi[:nang], \
-            scat_coeff[:nang*nmom*noct], weights[:nang], mat[:nx*ny*nz], \
+            scat_coeff[:nang*cmom*noct], weights[:nang], mat[:nx*ny*nz], \
             velocity[:ng], xs[:nmat*ng], fixed_source[:nx*ny*nz*ng], \
             gg_cs[:nmat*nmom*ng*ng], lma[:nmom]) \
         map(from: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
@@ -306,6 +306,8 @@ void iterate(void)
 // Compute the scalar flux from the angular flux
 void reduce_angular(void)
 {
+    zero_flux_moments_buffer();
+
     START_PROFILING;
 
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
@@ -341,7 +343,7 @@ void reduce_angular(void)
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) = scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
@@ -364,7 +366,7 @@ void reduce_angular(void)
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) = scat_coeff(a,l+1,0) * weights(a) * angular(0,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(0,a,g,i,j,k);
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * angular(1,a,g,i,j,k);
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * angular(2,a,g,i,j,k);
                                 scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * angular(3,a,g,i,j,k);
