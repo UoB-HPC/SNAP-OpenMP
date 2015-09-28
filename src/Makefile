@@ -3,19 +3,20 @@
 #
 
 # User defined parameters
-DBG 	= no
-MICMODE = offload
-COPTION = 
-FOPTION = 
-OPENMP 	= -qopenmp
-TARGET 	= snap
-CC 		= mpiicc
-FORTRAN = mpiifort
+DBG 	 = no
+MIC_MODE = offload
+PROFILER = yes
+COPTION  = 
+FOPTION  = 
+OPENMP 	 = -qopenmp
+TARGET 	 = snap
+CC 		 = mpiicc
+FORTRAN  = mpiifort
 
 # Enables native or offload compilation
-ifeq ($(MICMODE), native)
+ifeq ($(MIC_MODE), native)
   MIC = -mmic
-else ifeq ($(MICMODE), offload)
+else ifeq ($(MIC_MODE), offload)
   MIC = -DOFFLOAD=1
 endif
 
@@ -33,7 +34,7 @@ CFLAGS2 = -lm
 FFLAG2 =
 
 # Enables fine grained profiling of C implementation
-ifdef PROFILER
+ifeq ($(PROFILER), yes)
   CFLAGS += -std=gnu99 -DENABLE_PROFILING
 else
   CFLAGS += -std=c99 

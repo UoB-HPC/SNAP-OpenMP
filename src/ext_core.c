@@ -10,6 +10,8 @@
 #include "ext_problem.h"
 #include "ext_profiler.h"
 
+#define MIC_DEVICE 0
+
 void ext_solve_(
 		double *mu, 
 		double *eta, 
@@ -23,16 +25,13 @@ void ext_solve_(
 		double *gg_cs,
 		int *lma)
 {
-    if(OFFLOAD)
-    {
-        initialise_host_memory();
-    }
+    initialise_host_memory();
 
 #pragma omp target update to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
         nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
         epsi, tolr, dd_i, global_timestep)
 
-#pragma omp target if(OFFLOAD) \
+#pragma omp target device(MIC_DEVICE) if(OFFLOAD) \
         map(to: mu[:nang], eta[:nang], xi[:nang], \
             scat_coeff[:nang*nmom*noct], weights[:nang], mat[:nx*ny*nz], \
             velocity[:ng], xs[:nx*ng], fixed_source[:nx*ny*nz*ng], \
@@ -118,8 +117,6 @@ void initialise_device_memory(
     START_PROFILING;
 
     // Allocate flux in and out
-    flux_in = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
-    flux_out = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
 
     for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
     {
@@ -136,10 +133,8 @@ void initialise_device_memory(
     flux_k = malloc(sizeof(double)*nang*nx*ny*ng);
     zero_edge_flux_buffers();
 
-    scalar_mom = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
     zero_flux_moments_buffer();
 
-    scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
     zero_scalar_flux();
 
     dd_j = malloc(sizeof(double)*nang);
@@ -321,13 +316,7 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp parallel for
-    for(int i = 0; i < nz*ny*nx*ng*(cmom-1); ++i)
-    {
-        scalar_mom[i] = 0.0;
-    }
-
-#pragma omp parallel for
+#pragma omp parallel for collapse(3)
     for(int k = 0; k < nz; ++k)
     {
         for(int j = 0; j < ny; ++j)
@@ -346,33 +335,48 @@ void reduce_angular(void)
                         // flux in the cell
                         if (time_delta(g) != 0.0)
                         {
-                            for(int o = 0; o < noct; ++o)
-                            {
-                                tot_g += weights(a) * (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
-                            }
+                                tot_g += weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
+                                tot_g += weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                for(int o = 0; o < noct; ++o)
-                                {
-                                    scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * 
-                                        (0.5 * (angular(o,a,g,i,j,k) + angular_prev(o,a,g,i,j,k)));
-                                }
+                                scalar_mom(g,l,i,j,k) = scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
                             }
                         }
                         else
                         {
-                            for(int o = 0; o < noct; ++o)
-                            {
-                                tot_g += weights(a) * angular(o,a,g,i,j,k);
-                            }
+                            tot_g += weights(a) * angular(0,a,g,i,j,k);
+                            tot_g += weights(a) * angular(1,a,g,i,j,k);
+                            tot_g += weights(a) * angular(2,a,g,i,j,k);
+                            tot_g += weights(a) * angular(3,a,g,i,j,k);
+                            tot_g += weights(a) * angular(4,a,g,i,j,k);
+                            tot_g += weights(a) * angular(5,a,g,i,j,k);
+                            tot_g += weights(a) * angular(6,a,g,i,j,k);
+                            tot_g += weights(a) * angular(7,a,g,i,j,k);
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                for(int o = 0; o < noct; ++o)
-                                {
-                                    scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,o) * weights(a) * angular(o,a,g,i,j,k);
-                                }
+                                scalar_mom(g,l,i,j,k) = scat_coeff(a,l+1,0) * weights(a) * angular(0,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * angular(1,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * angular(2,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * angular(3,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * angular(4,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * angular(5,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * angular(6,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * angular(7,a,g,i,j,k);
                             }
                         }
                     }
@@ -389,7 +393,7 @@ void reduce_angular(void)
 // Copy the scalar flux value back to the host and transpose
 void ext_get_transpose_scalar_flux_(double *scalar)
 {
-    START_PROFILING;
+    //START_PROFILING;
 
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
@@ -407,12 +411,12 @@ void ext_get_transpose_scalar_flux_(double *scalar)
         }
     }
 
-    STOP_PROFILING(__func__);
+    //STOP_PROFILING(__func__);
 }
 
 void ext_get_transpose_scalar_moments_(double *scalar_moments)
 {
-    START_PROFILING;
+    //START_PROFILING;
 
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
@@ -433,13 +437,13 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
         }
     }
 
-    STOP_PROFILING(__func__);
+    //STOP_PROFILING(__func__);
 }
 
 // Copy the flux_out buffer back to the host
 void ext_get_transpose_output_flux_(double* output_flux)
 {
-    START_PROFILING;
+    //START_PROFILING;
 
     double *tmp = (global_timestep % 2 == 0) ? flux_out : flux_in;
 
@@ -465,5 +469,5 @@ void ext_get_transpose_output_flux_(double* output_flux)
         }
     }
 
-    STOP_PROFILING(__func__);
+    //STOP_PROFILING(__func__);
 }

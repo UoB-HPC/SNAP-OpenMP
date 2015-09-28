@@ -190,25 +190,19 @@ void zero_edge_flux_buffers(void)
 {
     START_PROFILING;
 
-#pragma omp parallel
-    { 
-#pragma omp for
-        for(int i = 0; i < nang*ng*ny*nz; ++i)
-        {
-            flux_i[i] = 0.0;
-        }
+    int fi_len = nang*ng*ny*nz;
+    int fj_len = nang*ng*nx*nz;
+    int fk_len = nang*ng*nx*ny;
 
-#pragma omp for
-        for(int i = 0; i < nang*ng*nx*nz; ++i)
-        {
-            flux_j[i] = 0.0;
-        }
+#define MAX(A,B) (((A) > (B)) ? (A) : (B))
+    int max_length = MAX(MAX(fi_len, fj_len), fk_len);
 
-#pragma omp for
-        for(int i = 0; i < nang*ng*nx*ny; ++i)
-        {
-            flux_k[i] = 0.0;
-        }
+#pragma omp parallel for schedule(static, 5000)
+    for(int i = 0; i < max_length; ++i)
+    {
+        if(i < fi_len) flux_i[i] = 0.0;
+        if(i < fj_len) flux_j[i] = 0.0;
+        if(i < fk_len) flux_k[i] = 0.0;
     }
 
     STOP_PROFILING(__func__);

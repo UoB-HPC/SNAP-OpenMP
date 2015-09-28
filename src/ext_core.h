@@ -14,8 +14,7 @@ void ext_solve_(
 		int *mat,
 		double *fixed_source,
 		double *gg_cs,
-		int *lma);//,
-		//double *g2g_source);
+		int *lma);
 
 // Entry point for initialising problem params
 void initialise_parameters(

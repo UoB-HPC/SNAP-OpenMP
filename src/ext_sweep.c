@@ -142,7 +142,7 @@ void sweep_cell(
 {
     START_PROFILING;
 
-#pragma omp parallel for
+#pragma omp parallel for collapse(3)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
@@ -165,7 +165,7 @@ void sweep_cell(
                 double source_term = source(0,i,j,k,g);
 
                 // Add in the anisotropic scattering source moments
-#pragma novector
+//#pragma novector
                 for (unsigned int l = 1; l < cmom; l++)
                 {
                     source_term += scat_coeff(a,l,oct) * source(l,i,j,k,g);
