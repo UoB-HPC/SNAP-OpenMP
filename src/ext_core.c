@@ -10,8 +10,6 @@
 #include "ext_problem.h"
 #include "ext_profiler.h"
 
-#define MIC_DEVICE 0
-
 void ext_solve_(
 		double *mu, 
 		double *eta, 
@@ -31,13 +29,13 @@ void ext_solve_(
         nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
         epsi, tolr, dd_i, global_timestep)
 
-#pragma omp target device(MIC_DEVICE) if(OFFLOAD) \
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
         map(to: mu[:nang], eta[:nang], xi[:nang], \
             scat_coeff[:nang*nmom*noct], weights[:nang], mat[:nx*ny*nz], \
-            velocity[:ng], xs[:nx*ng], fixed_source[:nx*ny*nz*ng], \
-            gg_cs[:nmom*nmom*ng*ng], lma[:nmom]) \
+            velocity[:ng], xs[:nmat*ng], fixed_source[:nx*ny*nz*ng], \
+            gg_cs[:nmat*nmom*ng*ng], lma[:nmom]) \
         map(from: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
-            flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:cmom*nx*ny*nz*ng])
+            flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
     {
         initialise_device_memory(mu, eta, xi, scat_coeff, weights, velocity,
                 xs, mat, fixed_source, gg_cs, lma);
@@ -116,8 +114,6 @@ void initialise_device_memory(
 {
     START_PROFILING;
 
-    // Allocate flux in and out
-
     for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
     {
         flux_in[i] = 0.0;
@@ -131,10 +127,9 @@ void initialise_device_memory(
     flux_i = malloc(sizeof(double)*nang*ny*nz*ng);
     flux_j = malloc(sizeof(double)*nang*nx*nz*ng);
     flux_k = malloc(sizeof(double)*nang*nx*ny*ng);
+
     zero_edge_flux_buffers();
-
     zero_flux_moments_buffer();
-
     zero_scalar_flux();
 
     dd_j = malloc(sizeof(double)*nang);
@@ -169,7 +164,7 @@ void initialise_host_memory(void)
     scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
     flux_in = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
     flux_out = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
-    scalar_mom = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
+    scalar_mom = malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng);
 }
 
 // Do the timestep, outer and inner iterations
@@ -335,14 +330,14 @@ void reduce_angular(void)
                         // flux in the cell
                         if (time_delta(g) != 0.0)
                         {
-                                tot_g += weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
-                                tot_g += weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {

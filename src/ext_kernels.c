@@ -213,7 +213,7 @@ void zero_flux_moments_buffer(void)
     START_PROFILING;
 
 #pragma omp parallel for
-    for(int i = 0; i < cmom*nx*ny*nz*ng; ++i)
+    for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
     {
         scalar_mom[i] = 0.0;
     }
