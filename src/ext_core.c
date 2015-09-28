@@ -85,7 +85,7 @@ void ext_initialise_parameters_(
         printf("Warning: nx and ichunk are different - expect the answers to be wrong...\n");
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, false);
 }
 
 // Argument list:
@@ -128,8 +128,8 @@ void initialise_device_memory(
     flux_j = malloc(sizeof(double)*nang*nx*nz*ng);
     flux_k = malloc(sizeof(double)*nang*nx*ny*ng);
 
-    zero_edge_flux_buffers();
     zero_flux_moments_buffer();
+    zero_edge_flux_buffers();
     zero_scalar_flux();
 
     dd_j = malloc(sizeof(double)*nang);
@@ -155,7 +155,7 @@ void initialise_device_memory(
     lma = lma_in;
     xs = xs_in;
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, false);
 }
 
 // Initialises buffers required on the host
@@ -306,9 +306,9 @@ void iterate(void)
 // Compute the scalar flux from the angular flux
 void reduce_angular(void)
 {
-    zero_flux_moments_buffer();
-
     START_PROFILING;
+
+    zero_flux_moments_buffer();
 
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
@@ -332,48 +332,48 @@ void reduce_angular(void)
                         // flux in the cell
                         if (time_delta(g) != 0.0)
                         {
-                            tot_g += weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
-                            tot_g += weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
+                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(0,a,g,i,j,k) + angular_prev(0,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(1,a,g,i,j,k) + angular_prev(1,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(2,a,g,i,j,k) + angular_prev(2,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(3,a,g,i,j,k) + angular_prev(3,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(4,a,g,i,j,k) + angular_prev(4,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(5,a,g,i,j,k) + angular_prev(5,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(6,a,g,i,j,k) + angular_prev(6,a,g,i,j,k)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(7,a,g,i,j,k) + angular_prev(7,a,g,i,j,k)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
                             }
                         }
                         else
                         {
-                            tot_g += weights(a) * angular(0,a,g,i,j,k);
-                            tot_g += weights(a) * angular(1,a,g,i,j,k);
-                            tot_g += weights(a) * angular(2,a,g,i,j,k);
-                            tot_g += weights(a) * angular(3,a,g,i,j,k);
-                            tot_g += weights(a) * angular(4,a,g,i,j,k);
-                            tot_g += weights(a) * angular(5,a,g,i,j,k);
-                            tot_g += weights(a) * angular(6,a,g,i,j,k);
-                            tot_g += weights(a) * angular(7,a,g,i,j,k);
+                            tot_g += weights(a) * angular(a,g,i,j,k,0);
+                            tot_g += weights(a) * angular(a,g,i,j,k,1);
+                            tot_g += weights(a) * angular(a,g,i,j,k,2);
+                            tot_g += weights(a) * angular(a,g,i,j,k,3);
+                            tot_g += weights(a) * angular(a,g,i,j,k,4);
+                            tot_g += weights(a) * angular(a,g,i,j,k,5);
+                            tot_g += weights(a) * angular(a,g,i,j,k,6);
+                            tot_g += weights(a) * angular(a,g,i,j,k,7);
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(0,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * angular(1,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * angular(2,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * angular(3,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * angular(4,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * angular(5,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * angular(6,a,g,i,j,k);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * angular(7,a,g,i,j,k);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(a,g,i,j,k,0);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * angular(a,g,i,j,k,1);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * angular(a,g,i,j,k,2);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * angular(a,g,i,j,k,3);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * angular(a,g,i,j,k,4);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * angular(a,g,i,j,k,5);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * angular(a,g,i,j,k,6);
+                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * angular(a,g,i,j,k,7);
                             }
                         }
                     }
@@ -384,14 +384,12 @@ void reduce_angular(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Copy the scalar flux value back to the host and transpose
 void ext_get_transpose_scalar_flux_(double *scalar)
 {
-    //START_PROFILING;
-
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
     {
@@ -407,14 +405,10 @@ void ext_get_transpose_scalar_flux_(double *scalar)
             }
         }
     }
-
-    //STOP_PROFILING(__func__);
 }
 
 void ext_get_transpose_scalar_moments_(double *scalar_moments)
 {
-    //START_PROFILING;
-
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
     {
@@ -433,15 +427,11 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
             }
         }
     }
-
-    //STOP_PROFILING(__func__);
 }
 
 // Copy the flux_out buffer back to the host
 void ext_get_transpose_output_flux_(double* output_flux)
 {
-    //START_PROFILING;
-
     double *tmp = (global_timestep % 2 == 0) ? flux_out : flux_in;
 
     // Transpose the data into the original SNAP format
@@ -465,6 +455,4 @@ void ext_get_transpose_output_flux_(double* output_flux)
             }
         }
     }
-
-    //STOP_PROFILING(__func__);
 }

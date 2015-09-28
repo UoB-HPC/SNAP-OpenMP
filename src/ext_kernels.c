@@ -30,7 +30,7 @@ void calc_denominator(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Calculate the time delta
@@ -43,7 +43,7 @@ void calc_time_delta(void)
         time_delta(g) = 2.0 / (dt * velocity(g));
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Calculate the diamond difference coefficients
@@ -59,7 +59,7 @@ void calc_dd_coefficients(void)
         dd_k(a) = (2.0/dz)*xi(a);
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Calculate the total cross section from the spatial mapping
@@ -82,7 +82,7 @@ void calc_total_cross_section(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 void calc_scattering_cross_section(void)
@@ -107,7 +107,7 @@ void calc_scattering_cross_section(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Calculate the outer source
@@ -115,7 +115,7 @@ void calc_outer_source(void)
 {
     START_PROFILING;
 
-#pragma omp parallel for
+#pragma omp parallel for collapse (3)
     for(int k = 0; k < nz; ++k)
     {
         for(int j = 0; j < ny; ++j)
@@ -150,7 +150,7 @@ void calc_outer_source(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Calculate the inner source
@@ -183,13 +183,11 @@ void calc_inner_source(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 void zero_edge_flux_buffers(void)
 {
-    START_PROFILING;
-
     int fi_len = nang*ng*ny*nz;
     int fj_len = nang*ng*nx*nz;
     int fk_len = nang*ng*nx*ny;
@@ -204,34 +202,24 @@ void zero_edge_flux_buffers(void)
         if(i < fj_len) flux_j[i] = 0.0;
         if(i < fk_len) flux_k[i] = 0.0;
     }
-
-    STOP_PROFILING(__func__);
 }
 
 void zero_flux_moments_buffer(void)
 {
-    START_PROFILING;
-
 #pragma omp parallel for
     for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
     {
         scalar_mom[i] = 0.0;
     }
-
-    STOP_PROFILING(__func__);
 }
 
 void zero_scalar_flux(void)
 {
-    START_PROFILING;
-
 #pragma omp parallel for
     for(int i = 0; i < nx*ny*nz*ng; ++i)
     {
         scalar_flux[i] = 0.0;
     }
-
-    STOP_PROFILING(__func__);
 }
 
 bool check_convergence(
@@ -307,7 +295,7 @@ bool check_convergence(
 
     return r;
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
 
 // Copies the value of scalar flux
@@ -321,5 +309,5 @@ void store_scalar_flux(double* to)
         to[i] = scalar_flux[i];
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }

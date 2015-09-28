@@ -27,7 +27,7 @@ void _profiler_start_timer()
 }
 
 // Internally end the profiling timer and store results
-void _profiler_end_timer(const char* kernel_name)
+void _profiler_end_timer(const char* kernel_name, bool count_for_total)
 {
     clock_gettime(CLOCK_MONOTONIC, &_profiler_end);
 
@@ -55,27 +55,32 @@ void _profiler_end_timer(const char* kernel_name)
         ? (elapsed_sec-1)*MS + (NS+elapsed_ns)/NS_MS 
         : elapsed_sec*MS + elapsed_ns/NS_MS;
     _profiler_entries[ii].calls++;
+    _profiler_entries[ii].count_for_total = count_for_total;
 }
 
 // Print the profiling results to output
 void _profiler_print_results()
 {
-    printf("\n*************************************************************\n");
-    //for(int ii = 0; ii < 58; ++ii) printf("*");
+    printf("\n-------------------------------------------------------------\n");
     printf("\nProfiling Results:\n\n");
     printf("%-30s%8s%20s\n", "Kernel Name", "Calls", "Runtime (ms)");
 
     double total_elapsed_time;
     for(int ii = 0; ii < _profiler_kernelcount; ++ii)
     {
-        total_elapsed_time += _profiler_entries[ii].time;
+        if(_profiler_entries[ii].count_for_total)
+        {
+            total_elapsed_time += _profiler_entries[ii].time;
+        }
 
-        printf("%-30s%8d%20.06F\n", _profiler_entries[ii].name, 
-                _profiler_entries[ii].calls, _profiler_entries[ii].time);
+        printf("%-30s%8d%20.03F%c\n", _profiler_entries[ii].name, 
+                _profiler_entries[ii].calls, 
+                _profiler_entries[ii].time,
+                _profiler_entries[ii].count_for_total ? ' ' : '*');
     }
 
-    printf("\nTotal elapsed time: %.06Fms\n", total_elapsed_time);
-    printf("\n*************************************************************\n\n");
+    printf("\nTotal elapsed time: %.03Fms, entries * are excluded.\n", total_elapsed_time);
+    printf("\n-------------------------------------------------------------\n\n");
 }
 
 #endif

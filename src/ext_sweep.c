@@ -55,7 +55,7 @@ plane *compute_sweep_order(void)
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 
     return planes;
 }
@@ -264,5 +264,5 @@ void sweep_cell(
         }
     }
 
-    STOP_PROFILING(__func__);
+    STOP_PROFILING(__func__, true);
 }
