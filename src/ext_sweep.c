@@ -142,11 +142,12 @@ void sweep_cell(
 {
     START_PROFILING;
 
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
+//#pragma omp simd private(nc,tg) aligned(dd_j,dd_k,mu:64)
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group

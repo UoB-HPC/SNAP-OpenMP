@@ -1,1 +1,1 @@
-MIC_ENV_PREFIX=MIC MIC_OMP_NUM_THREADS=180 MIC_KMP_AFFINITY=compact OMP_NUM_THREADS=16 KMP_AFFINITY=compact mpirun -n 1 ./snap snap.in snap.out
+MIC_ENV_PREFIX=MIC MIC_OMP_NUM_THREADS=180 MIC_KMP_AFFINITY=balanced,granularity=thread OMP_NUM_THREADS=16 KMP_AFFINITY=compact mpirun -n 1 ./snap snap.in snap.out

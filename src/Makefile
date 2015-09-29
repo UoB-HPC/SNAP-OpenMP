@@ -6,7 +6,7 @@
 DBG 	 = no
 MIC_MODE = offload
 PROFILER = yes
-COPTION  = 
+COPTION  = -qopt-report=5 -qopt-report-phase=vec
 FOPTION  = 
 OPENMP 	 = -qopenmp
 TARGET 	 = snap
@@ -27,7 +27,7 @@ ifeq ($(DBG),yes)
   CFLAGS = -g -O0 -debug all -traceback $(OPENMP) $(MIC) $(COPTION)
 else
   FFLAGS = -O3 $(MIC) $(OPENMP)
-  CFLAGS = -O3 $(MIC) $(OPENMP)
+  CFLAGS = -O3 $(MIC) $(OPENMP) $(COPTION)
 endif
 
 CFLAGS2 = -lm

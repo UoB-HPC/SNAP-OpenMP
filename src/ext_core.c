@@ -124,23 +124,23 @@ void initialise_device_memory(
     // flux_j(nang,ichunk,nz,ng) - Working psi_y array
     // flux_k(nang,ichunk,ny,ng) - Working psi_z array
 
-    flux_i = malloc(sizeof(double)*nang*ny*nz*ng);
-    flux_j = malloc(sizeof(double)*nang*nx*nz*ng);
-    flux_k = malloc(sizeof(double)*nang*nx*ny*ng);
+    flux_i = (double*)_mm_malloc(sizeof(double)*nang*ny*nz*ng, VEC_ALIGN);
+    flux_j = (double*)_mm_malloc(sizeof(double)*nang*nx*nz*ng, VEC_ALIGN);
+    flux_k = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*ng, VEC_ALIGN);
 
     zero_flux_moments_buffer();
     zero_edge_flux_buffers();
     zero_scalar_flux();
 
-    dd_j = malloc(sizeof(double)*nang);
-    dd_k = malloc(sizeof(double)*nang);
-    total_cross_section = malloc(sizeof(double)*nx*ny*nz*ng);
-    scat_cs = malloc(sizeof(double)*nmom*nx*ny*nz*ng);
-    denom = malloc(sizeof(double)*nang*nx*ny*nz*ng);
-    source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
-    time_delta = malloc(sizeof(double)*ng);
-    groups_todo = malloc(sizeof(unsigned int)*ng);
-    g2g_source = malloc(sizeof(double)*cmom*nx*ny*nz*ng);
+    dd_j = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
+    dd_k = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
+    total_cross_section = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
+    scat_cs = (double*)_mm_malloc(sizeof(double)*nmom*nx*ny*nz*ng, VEC_ALIGN);
+    denom = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng, VEC_ALIGN);
+    source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
+    time_delta = (double*)_mm_malloc(sizeof(double)*ng, VEC_ALIGN);
+    groups_todo = (unsigned int*)_mm_malloc(sizeof(unsigned int)*ng, VEC_ALIGN);
+    g2g_source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
 
     // Read-only buffers initialised in Fortran code
     mu = mu_in;
@@ -161,18 +161,18 @@ void initialise_device_memory(
 // Initialises buffers required on the host
 void initialise_host_memory(void)
 {
-    scalar_flux = malloc(sizeof(double)*nx*ny*nz*ng);
-    flux_in = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
-    flux_out = malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
-    scalar_mom = malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng);
+    scalar_flux = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
+    flux_in = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
+    flux_out = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
+    scalar_mom = (double*)_mm_malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng, VEC_ALIGN);
 }
 
 // Do the timestep, outer and inner iterations
 void iterate(void)
 {
-    double *old_outer_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
-    double *old_inner_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
-    double *new_scalar = malloc(sizeof(double)*nx*ny*nz*ng);
+    double *old_outer_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
+    double *old_inner_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
+    double *new_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
 
     unsigned int num_groups_todo;
     bool outer_done;
@@ -295,10 +295,10 @@ void iterate(void)
         printf("Warning: did not converge\n");
     }
 
-    free(old_outer_scalar);
-    free(new_scalar);
-    free(old_inner_scalar);
-    free(groups_todo);
+    _mm_free(old_outer_scalar);
+    _mm_free(new_scalar);
+    _mm_free(old_inner_scalar);
+    _mm_free(groups_todo);
 
     PRINT_PROFILING_RESULTS;
 }
@@ -343,14 +343,16 @@ void reduce_angular(void)
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
+                                double tot_sm = 0.0;
+                                tot_sm += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
+                                tot_sm += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
+                                tot_sm += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
+                                tot_sm += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
+                                tot_sm += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
+                                tot_sm += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
+                                tot_sm += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
+                                tot_sm += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
+                                scalar_mom(g,l,i,j,k) += tot_sm;
                             }
                         }
                         else
@@ -366,14 +368,16 @@ void reduce_angular(void)
 
                             for (unsigned int l = 0; l < (cmom-1); l++)
                             {
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,0) * weights(a) * angular(a,g,i,j,k,0);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,1) * weights(a) * angular(a,g,i,j,k,1);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,2) * weights(a) * angular(a,g,i,j,k,2);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,3) * weights(a) * angular(a,g,i,j,k,3);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,4) * weights(a) * angular(a,g,i,j,k,4);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,5) * weights(a) * angular(a,g,i,j,k,5);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,6) * weights(a) * angular(a,g,i,j,k,6);
-                                scalar_mom(g,l,i,j,k) += scat_coeff(a,l+1,7) * weights(a) * angular(a,g,i,j,k,7);
+                                double tot_sm = 0.0;
+                                tot_sm += scat_coeff(a,l+1,0) * weights(a) * angular(a,g,i,j,k,0);
+                                tot_sm += scat_coeff(a,l+1,1) * weights(a) * angular(a,g,i,j,k,1);
+                                tot_sm += scat_coeff(a,l+1,2) * weights(a) * angular(a,g,i,j,k,2);
+                                tot_sm += scat_coeff(a,l+1,3) * weights(a) * angular(a,g,i,j,k,3);
+                                tot_sm += scat_coeff(a,l+1,4) * weights(a) * angular(a,g,i,j,k,4);
+                                tot_sm += scat_coeff(a,l+1,5) * weights(a) * angular(a,g,i,j,k,5);
+                                tot_sm += scat_coeff(a,l+1,6) * weights(a) * angular(a,g,i,j,k,6);
+                                tot_sm += scat_coeff(a,l+1,7) * weights(a) * angular(a,g,i,j,k,7);
+                                scalar_mom(g,l,i,j,k) += tot_sm;
                             }
                         }
                     }
