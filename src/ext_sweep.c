@@ -142,7 +142,6 @@ void sweep_cell(
 {
     START_PROFILING;
 
-//#pragma omp parallel for collapse(2)
 #pragma omp parallel for collapse(2) 
     for(int nc = 0; nc < num_cells; ++nc)
     {
@@ -167,7 +166,6 @@ void sweep_cell(
                 double source_term = source(0,i,j,k,g);
 
                 // Add in the anisotropic scattering source moments
-#pragma novector
                 for (unsigned int l = 1; l < cmom; l++)
                 {
                     source_term += scat_coeff(a,l,oct) * source(l,i,j,k,g);
@@ -198,64 +196,65 @@ void sweep_cell(
                 }
 
                 // Perform the fixup loop
-                //double zeros[4] = {1.0, 1.0, 1.0, 1.0};
-                //int num_to_fix = 4;
-                //// Fixup is a bounded loop as we will worst case fix up each face and centre value one after each other
-                //for (int fix = 0; fix < 4; fix++)
-                //{
-                //    // Record which ones are zero
-                //    if (tmp_flux_i < 0.0) zeros[0] = 0.0;
-                //    if (tmp_flux_j < 0.0) zeros[1] = 0.0;
-                //    if (tmp_flux_k < 0.0) zeros[2] = 0.0;
-                //    if (psi < 0.0) zeros[3] = 0.0;
+                double zeros[4];
+                int num_to_fix = 4;
+                // Fixup is a bounded loop as we will worst case fix up each face and centre value one after each other
+#pragma unroll(4)
+                for (int fix = 0; fix < 4; fix++)
+                {
+                    // Record which ones are zero
+                    zeros[0] = (tmp_flux_i < 0.0) ? 0.0 : 1.0;
+                    zeros[1] = (tmp_flux_j < 0.0) ? 0.0 : 1.0;
+                    zeros[2] = (tmp_flux_k < 0.0) ? 0.0 : 1.0;
+                    zeros[3] = (psi < 0.0) ? 0.0 : 1.0;
 
-                //    if (num_to_fix == zeros[0] + zeros[1] + zeros[2] + zeros[3])
-                //    {
-                //        // We have fixed up enough
-                //        break;
-                //    }
-                //    num_to_fix = zeros[0] + zeros[1] + zeros[2] + zeros[3];
+                    if (num_to_fix == zeros[0] + zeros[1] + zeros[2] + zeros[3])
+                    {
+                        // We have fixed up enough
+                        break;
+                    }
+                    num_to_fix = zeros[0] + zeros[1] + zeros[2] + zeros[3];
 
-                //    // Recompute cell centre value
-                //    psi = flux_i(a,g,j,k)*mu(a)*dd_i*(1.0+zeros[0]) 
-                //        + flux_j(a,g,j,k)*dd_j(a)*(1.0+zeros[1]) 
-                //        + flux_k(a,g,i,j)*dd_k(a)*(1.0+zeros[2]);
+                    // Recompute cell centre value
+                    psi = flux_i(a,g,j,k)*mu(a)*dd_i*(1.0+zeros[0]) 
+                        + flux_j(a,g,j,k)*dd_j(a)*(1.0+zeros[1]) 
+                        + flux_k(a,g,i,j)*dd_k(a)*(1.0+zeros[2]);
 
-                //    if (time_delta(g) != 0.0)
-                //    {
-                //        psi += time_delta(g) * l_flux_in(a,g,i,j,k) * (1.0+zeros[3]);
-                //    }
-                //    psi = 0.5*psi + source_term;
-                //    double recalc_denom = total_cross_section(g,i,j,k);
-                //    recalc_denom += mu(a) * dd_i * zeros[0];
-                //    recalc_denom += dd_j(a) * zeros[1];
-                //    recalc_denom += dd_k(a) * zeros[2];
-                //    recalc_denom += time_delta(g) * zeros[3];
+                    if (time_delta(g) != 0.0)
+                    {
+                        psi += time_delta(g) * l_flux_in(a,g,i,j,k) * (1.0+zeros[3]);
+                    }
+                    psi = 0.5*psi + source_term;
+                    double recalc_denom = total_cross_section(g,i,j,k);
+                    recalc_denom += mu(a) * dd_i * zeros[0];
+                    recalc_denom += dd_j(a) * zeros[1];
+                    recalc_denom += dd_k(a) * zeros[2];
+                    recalc_denom += time_delta(g) * zeros[3];
 
-                //    if (recalc_denom > 1.0E-12)
-                //    {
-                //        psi /= recalc_denom;
-                //    }
-                //    else
-                //    {
-                //        psi = 0.0;
-                //    }
+                    if (recalc_denom > 1.0E-12)
+                    {
+                        psi /= recalc_denom;
+                    }
+                    else
+                    {
+                        psi = 0.0;
+                    }
 
-                //    // Recompute the edge fluxes with the new centre value
-                //    tmp_flux_i = 2.0 * psi - flux_i(a,g,j,k);
-                //    tmp_flux_j = 2.0 * psi - flux_j(a,g,i,k);
-                //    tmp_flux_k = 2.0 * psi - flux_k(a,g,i,j);
-                //    if (time_delta(g) != 0.0)
-                //    {
-                //        psi = 2.0*psi - l_flux_in(a,g,i,j,k);
-                //    }
-                //}
+                    // Recompute the edge fluxes with the new centre value
+                    tmp_flux_i = 2.0 * psi - flux_i(a,g,j,k);
+                    tmp_flux_j = 2.0 * psi - flux_j(a,g,i,k);
+                    tmp_flux_k = 2.0 * psi - flux_k(a,g,i,j);
+                    if (time_delta(g) != 0.0)
+                    {
+                        psi = 2.0*psi - l_flux_in(a,g,i,j,k);
+                    }
+                }
 
-                //// Fix up loop is done, just need to set the final values
-                //tmp_flux_i = tmp_flux_i * zeros[0];
-                //tmp_flux_j = tmp_flux_j * zeros[1];
-                //tmp_flux_k = tmp_flux_k * zeros[2];
-                //psi = psi * zeros[3];
+                // Fix up loop is done, just need to set the final values
+                tmp_flux_i = tmp_flux_i * zeros[0];
+                tmp_flux_j = tmp_flux_j * zeros[1];
+                tmp_flux_k = tmp_flux_k * zeros[2];
+                psi = psi * zeros[3];
 
                 // Write values to global memory
                 flux_i(a,g,j,k) = tmp_flux_i;

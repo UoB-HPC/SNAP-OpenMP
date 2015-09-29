@@ -313,76 +313,40 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp parallel for collapse(3)
-    for(int k = 0; k < nz; ++k)
+    for(unsigned int o = 0; o < 8; ++o)
     {
-        for(int j = 0; j < ny; ++j)
+#pragma omp parallel for 
+        for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
         {
-            for(int i = 0; i < nx; ++i)
+            for (unsigned int g = 0; g < ng; g++)
             {
-                for (unsigned int g = 0; g < ng; g++)
+                for (unsigned int a = 0; a < nang; a++)
                 {
-                    double tot_g = 0.0;
-
-                    for (unsigned int a = 0; a < nang; a++)
+                    // NOTICE: we do the reduction with psi, not ptr_out.
+                    // This means that (line 307) the time dependant
+                    // case isnt the value that is summed, but rather the
+                    // flux in the cell
+                    if (time_delta(g) != 0.0)
                     {
-                        // NOTICE: we do the reduction with psi, not ptr_out.
-                        // This means that (line 307) the time dependant
-                        // case isnt the value that is summed, but rather the
-                        // flux in the cell
-                        if (time_delta(g) != 0.0)
-                        {
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
-                            tot_g += weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
+                        scalar_flux[g+ind*ng] += weights(a) * 
+                            (0.5 * (angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))] + angular_prev[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]));
 
-                            for (unsigned int l = 0; l < (cmom-1); l++)
-                            {
-                                double tot_sm = 0.0;
-                                tot_sm += scat_coeff(a,l+1,0) * weights(a) * (0.5 * (angular(a,g,i,j,k,0) + angular_prev(a,g,i,j,k,0)));
-                                tot_sm += scat_coeff(a,l+1,1) * weights(a) * (0.5 * (angular(a,g,i,j,k,1) + angular_prev(a,g,i,j,k,1)));
-                                tot_sm += scat_coeff(a,l+1,2) * weights(a) * (0.5 * (angular(a,g,i,j,k,2) + angular_prev(a,g,i,j,k,2)));
-                                tot_sm += scat_coeff(a,l+1,3) * weights(a) * (0.5 * (angular(a,g,i,j,k,3) + angular_prev(a,g,i,j,k,3)));
-                                tot_sm += scat_coeff(a,l+1,4) * weights(a) * (0.5 * (angular(a,g,i,j,k,4) + angular_prev(a,g,i,j,k,4)));
-                                tot_sm += scat_coeff(a,l+1,5) * weights(a) * (0.5 * (angular(a,g,i,j,k,5) + angular_prev(a,g,i,j,k,5)));
-                                tot_sm += scat_coeff(a,l+1,6) * weights(a) * (0.5 * (angular(a,g,i,j,k,6) + angular_prev(a,g,i,j,k,6)));
-                                tot_sm += scat_coeff(a,l+1,7) * weights(a) * (0.5 * (angular(a,g,i,j,k,7) + angular_prev(a,g,i,j,k,7)));
-                                scalar_mom(g,l,i,j,k) += tot_sm;
-                            }
-                        }
-                        else
+                        for (unsigned int l = 0; l < (cmom-1); l++)
                         {
-                            tot_g += weights(a) * angular(a,g,i,j,k,0);
-                            tot_g += weights(a) * angular(a,g,i,j,k,1);
-                            tot_g += weights(a) * angular(a,g,i,j,k,2);
-                            tot_g += weights(a) * angular(a,g,i,j,k,3);
-                            tot_g += weights(a) * angular(a,g,i,j,k,4);
-                            tot_g += weights(a) * angular(a,g,i,j,k,5);
-                            tot_g += weights(a) * angular(a,g,i,j,k,6);
-                            tot_g += weights(a) * angular(a,g,i,j,k,7);
-
-                            for (unsigned int l = 0; l < (cmom-1); l++)
-                            {
-                                double tot_sm = 0.0;
-                                tot_sm += scat_coeff(a,l+1,0) * weights(a) * angular(a,g,i,j,k,0);
-                                tot_sm += scat_coeff(a,l+1,1) * weights(a) * angular(a,g,i,j,k,1);
-                                tot_sm += scat_coeff(a,l+1,2) * weights(a) * angular(a,g,i,j,k,2);
-                                tot_sm += scat_coeff(a,l+1,3) * weights(a) * angular(a,g,i,j,k,3);
-                                tot_sm += scat_coeff(a,l+1,4) * weights(a) * angular(a,g,i,j,k,4);
-                                tot_sm += scat_coeff(a,l+1,5) * weights(a) * angular(a,g,i,j,k,5);
-                                tot_sm += scat_coeff(a,l+1,6) * weights(a) * angular(a,g,i,j,k,6);
-                                tot_sm += scat_coeff(a,l+1,7) * weights(a) * angular(a,g,i,j,k,7);
-                                scalar_mom(g,l,i,j,k) += tot_sm;
-                            }
+                            scalar_mom[g+l*ng+(ng*(cmom-1)*ind)] += scat_coeff(a,l+1,o) * weights(a) * 
+                                (0.5 * (angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))] + angular_prev[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]));
                         }
                     }
+                    else
+                    {
+                        scalar_flux[g+ind*ng] += weights(a) * angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))];
 
-                    scalar_flux(g,i,j,k) = tot_g;
+                        for (unsigned int l = 0; l < (cmom-1); l++)
+                        {
+                            scalar_mom[g+l*ng+(ng*(cmom-1)*ind)] += scat_coeff(a,l+1,o) * 
+                                weights(a) * angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))];
+                        }
+                    }
                 }
             }
         }
@@ -425,7 +389,7 @@ void ext_get_transpose_scalar_moments_(double *scalar_moments)
                     for (unsigned int i = 0; i < nx; i++)
                     {
                         scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] 
-                            = scalar_mom[g+(ng*l)+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
+                            = scalar_mom[(g)+(l*ng)+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
                     }
                 }
             }

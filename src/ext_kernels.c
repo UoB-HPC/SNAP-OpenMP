@@ -12,20 +12,14 @@ void calc_denominator(void)
     START_PROFILING;
 
 #pragma omp parallel for
-    for (unsigned int k = 0; k < nz; k++)
+    for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
     {
-        for (unsigned int j = 0; j < ny; j++)
+        for (unsigned int g = 0; g < ng; ++g)
         {
-            for (unsigned int i = 0; i < nx; i++)
+            for (unsigned int a = 0; a < nang; ++a)
             {
-                for (unsigned int g = 0; g < ng; ++g)
-                {
-                    for (unsigned int a = 0; a < nang; ++a)
-                    {
-                        denom(a,g,i,j,k) = 1.0 / (total_cross_section(g,i,j,k)
-                                + time_delta(g) + mu(a)*dd_i + dd_j(a) + dd_k(a));
-                    }
-                }
+                denom[a+g*nang+ind*ng*nang] = 1.0 / (total_cross_section[g+ind*ng] 
+                        + time_delta(g) + mu(a)*dd_i + dd_j(a) + dd_k(a));
             }
         }
     }
@@ -68,13 +62,13 @@ void calc_total_cross_section(void)
     START_PROFILING;
 
 #pragma omp parallel for
-    for (unsigned int k = 0; k < nz; k++)
+    for(int k = 0; k < nz; ++k)
     {
-        for (unsigned int j = 0; j < ny; j++)
+        for(int j = 0; j < ny; ++j)
         {
-            for (unsigned int i = 0; i < nx; i++)
+            for(int i = 0; i < nx; ++i)
             {
-                for(unsigned int g = 0; g < ng; ++g)
+                for(int g = 0; g < ng; ++g)
                 {
                     total_cross_section(g,i,j,k) = xs(mat(i,j,k)-1,g);
                 }
@@ -115,14 +109,14 @@ void calc_outer_source(void)
 {
     START_PROFILING;
 
-#pragma omp parallel for collapse (3)
-    for(int k = 0; k < nz; ++k)
+#pragma omp parallel for collapse(4)
+    for (unsigned int g1 = 0; g1 < ng; g1++)
     {
-        for(int j = 0; j < ny; ++j)
+        for(int k = 0; k < nz; ++k)
         {
-            for(int i = 0; i < nx; ++i)
+            for(int j = 0; j < ny; ++j)
             {
-                for (unsigned int g1 = 0; g1 < ng; g1++)
+                for(int i = 0; i < nx; ++i)
                 {
                     g2g_source(0,i,j,k,g1) = fixed_source(i,j,k,g1);
 
@@ -158,14 +152,14 @@ void calc_inner_source(void)
 {
     START_PROFILING;
 
-#pragma omp parallel for
-    for(int k = 0; k < nz; ++k)
+#pragma omp parallel for collapse(4)
+    for (unsigned int g = 0; g < ng; g++)
     {
-        for(int j = 0; j < ny; ++j)
+        for(int k = 0; k < nz; ++k)
         {
-            for(int i = 0; i < nx; ++i)
+            for(int j = 0; j < ny; ++j)
             {
-                for (unsigned int g = 0; g < ng; g++)
+                for(int i = 0; i < nx; ++i)
                 {
                     source(0,i,j,k,g) = g2g_source(0,i,j,k,g) + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
 
