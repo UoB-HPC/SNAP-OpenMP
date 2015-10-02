@@ -65,7 +65,7 @@ void _profiler_print_results()
     printf("\nProfiling Results:\n\n");
     printf("%-30s%8s%20s\n", "Kernel Name", "Calls", "Runtime (ms)");
 
-    double total_elapsed_time;
+    double total_elapsed_time = 0.0;
     for(int ii = 0; ii < _profiler_kernelcount; ++ii)
     {
         if(_profiler_entries[ii].count_for_total)
