@@ -31,7 +31,7 @@
 #else
 
     #define START_PROFILING ; 
-    #define STOP_PROFILING(name) ; 
+    #define STOP_PROFILING(name, tot) ; 
     #define PRINT_PROFILING_RESULTS ;
 
 #endif

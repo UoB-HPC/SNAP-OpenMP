@@ -60,6 +60,9 @@ void iterate(void);
 // Compute the scalar flux from the angular flux
 void reduce_angular(void);
 
+// Transposes the scattering coefficient matrix
+double* transpose_scat_coeff(double* scat_coeff_in);
+
 #pragma omp end declare target
 
 // Transposes the scalar flux back to SNAP format
@@ -68,6 +71,7 @@ void ext_get_transpose_scalar_flux_(double *scalar);
 // Transposes the scalar moments back to SNAP format
 void ext_get_transpose_scalar_moments_(double *scalar_moments);
 
-// Transposes teh output flux back to SNAp format
+// Transposes the output flux back to SNAP format
 void ext_get_transpose_output_flux_(double* output_flux);
+
 

@@ -15,14 +15,14 @@
 #define mu(a) mu[(a)]
 #define eta(a) eta[(a)]
 #define xi(a) xi[(a)]
-#define scat_coeff(a,m,o) scat_coeff[(a)+(nang*(m))+(nang*cmom*(o))]
+#define scat_coeff(m,a,o) scat_coeff[(m)+(a*cmom)+(nang*cmom*(o))]
 #define time_delta(g) time_delta[(g)]
 #define total_cross_section(g,i,j,k) total_cross_section[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define scalar_flux(g,i,j,k) scalar_flux[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define weights(a) weights[(a)]
 
-#define angular(a,g,i,j,k,o) angular[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
-#define angular_prev(a,g,i,j,k,o) angular_prev[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
+#define angular(o,ind,g,a) angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]
+#define angular_prev(o,ind,g,a) angular_prev[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]
 
 #define velocity(g) velocity[(g)]
 

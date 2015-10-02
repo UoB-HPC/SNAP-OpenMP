@@ -142,7 +142,7 @@ void sweep_cell(
 {
     START_PROFILING;
 
-#pragma omp parallel for collapse(2) 
+#pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
@@ -168,7 +168,7 @@ void sweep_cell(
                 // Add in the anisotropic scattering source moments
                 for (unsigned int l = 1; l < cmom; l++)
                 {
-                    source_term += scat_coeff(a,l,oct) * source(l,i,j,k,g);
+                    source_term += scat_coeff(l,a,oct) * source(l,i,j,k,g);
                 }
 
                 double psi = source_term 

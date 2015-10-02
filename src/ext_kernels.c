@@ -287,9 +287,9 @@ bool check_convergence(
         }
     }
 
-    return r;
-
     STOP_PROFILING(__func__, true);
+
+    return r;
 }
 
 // Copies the value of scalar flux
