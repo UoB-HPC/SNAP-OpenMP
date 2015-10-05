@@ -142,12 +142,15 @@ void sweep_cell(
 {
     START_PROFILING;
 
+#pragma omp target 
 #pragma omp parallel for collapse(2)
+//#pragma omp target teams distribute parallel for \
+    //num_teams(59) num_threads(3) collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
-#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:64)    
+//#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:64)    
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group
@@ -196,9 +199,9 @@ void sweep_cell(
                 }
 
                 // Perform the fixup loop
-                double zeros[4];
                 int num_to_fix = 4;
                 // Fixup is a bounded loop as we will worst case fix up each face and centre value one after each other
+                double zeros[4];
 #pragma unroll(4)
                 for (int fix = 0; fix < 4; fix++)
                 {
@@ -210,9 +213,9 @@ void sweep_cell(
 
                     if (num_to_fix == zeros[0] + zeros[1] + zeros[2] + zeros[3])
                     {
-                        // We have fixed up enough
                         break;
                     }
+
                     num_to_fix = zeros[0] + zeros[1] + zeros[2] + zeros[3];
 
                     // Recompute cell centre value
