@@ -26,22 +26,21 @@ void ext_solve_(
     initialise_device_memory(mu, eta, xi, scat_coeff_in, weights, velocity,
             xs, mat, fixed_source, gg_cs, lma);
 
-#pragma omp target update to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
+#pragma omp target update to(nx, ny, nz, ng, nang, ndim, noct, cmom, nmom, \
         nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
         epsi, tolr, dd_i, global_timestep)
 #pragma omp target data \
-    map(to: mu[:nang], eta[:nang], xi[:nang], \
-            scat_coeff[:scat_coeff_len], weights[:weights_len], mat[:mat_len], \
-            velocity[:velocity_len], xs[:xs_len], fixed_source[:fixed_source_len], \
-            gg_cs[:gg_cs_len], lma[:lma_len]) \
-    map(alloc:total_cross_section[:total_cross_section_len], dd_j[:dd_j_len], dd_k[:dd_k_len],\
+    map(to: mu[:nang], eta[:nang], xi[:nang], scat_coeff[:scat_coeff_len], \
+            weights[:weights_len], mat[:mat_len], velocity[:velocity_len], \
+            xs[:xs_len], fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], lma[:lma_len]) \
+    map(alloc: total_cross_section[:total_cross_section_len], dd_j[:dd_j_len], dd_k[:dd_k_len],\
             denom[:denom_len], time_delta[:time_delta_len], groups_todo[:groups_todo_len], \
-            g2g_source[:g2g_source_len], old_outer_scalar[:old_outer_scalar_len], \
-            old_inner_scalar[:old_inner_scalar_len], source[:source_len], \
+            g2g_source[:g2g_source_len], old_outer_scalar[:scalar_flux_len], \
+            old_inner_scalar[:scalar_flux_len], source[:source_len], \
             flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
-            new_scalar[:new_scalar_len], scat_cs[:scat_cs_len]) \
-    map(from: scalar_flux[:scalar_flux_len], flux_in[:flux_in_len],\
-            flux_out[:flux_out_len], scalar_mom[:scalar_mom_len])
+            new_scalar[:scalar_flux_len], scat_cs[:scat_cs_len]), \
+    map(from: flux_in[:flux_in_len], flux_out[:flux_out_len], \
+            scalar_flux[:scalar_flux_len], scalar_mom[:scalar_mom_len])
     {
         zero_flux_in_out();
         zero_scalar_flux();
@@ -50,6 +49,11 @@ void ext_solve_(
 
         iterate();
     }
+
+    _mm_free(old_outer_scalar);
+    _mm_free(new_scalar);
+    _mm_free(old_inner_scalar);
+    _mm_free(groups_todo);
 }
 
 // Initialises the problem parameters
@@ -124,30 +128,29 @@ void initialise_device_memory(
 {
     START_PROFILING;
 
-
     // flux_i(nang,ny,nz,ng)     - Working psi_x array (edge pointers)
     // flux_j(nang,ichunk,nz,ng) - Working psi_y array
     // flux_k(nang,ichunk,ny,ng) - Working psi_z array
 
-    flux_i = (double*)_mm_malloc(sizeof(double)*nang*ny*nz*ng, VEC_ALIGN);
-    flux_j = (double*)_mm_malloc(sizeof(double)*nang*nx*nz*ng, VEC_ALIGN);
-    flux_k = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*ng, VEC_ALIGN);
-    dd_j = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
-    dd_k = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
-    total_cross_section = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    scat_cs = (double*)_mm_malloc(sizeof(double)*nmom*nx*ny*nz*ng, VEC_ALIGN);
-    denom = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng, VEC_ALIGN);
-    source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
-    time_delta = (double*)_mm_malloc(sizeof(double)*ng, VEC_ALIGN);
-    groups_todo = (unsigned int*)_mm_malloc(sizeof(unsigned int)*ng, VEC_ALIGN);
-    g2g_source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
-    old_outer_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    old_inner_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    new_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    scalar_flux = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    flux_in = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
-    flux_out = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
-    scalar_mom = (double*)_mm_malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng, VEC_ALIGN);
+    flux_i = (double*)_mm_malloc(sizeof(double)*flux_i_len, VEC_ALIGN);
+    flux_j = (double*)_mm_malloc(sizeof(double)*flux_j_len, VEC_ALIGN);
+    flux_k = (double*)_mm_malloc(sizeof(double)*flux_k_len, VEC_ALIGN);
+    dd_j = (double*)_mm_malloc(sizeof(double)*dd_j_len, VEC_ALIGN);
+    dd_k = (double*)_mm_malloc(sizeof(double)*dd_k_len, VEC_ALIGN);
+    total_cross_section = (double*)_mm_malloc(sizeof(double)*total_cross_section_len, VEC_ALIGN);
+    scat_cs = (double*)_mm_malloc(sizeof(double)*scat_cs_len, VEC_ALIGN);
+    denom = (double*)_mm_malloc(sizeof(double)*denom_len, VEC_ALIGN);
+    source = (double*)_mm_malloc(sizeof(double)*source_len, VEC_ALIGN);
+    time_delta = (double*)_mm_malloc(sizeof(double)*time_delta_len, VEC_ALIGN);
+    groups_todo = (unsigned int*)_mm_malloc(sizeof(unsigned int)*groups_todo_len, VEC_ALIGN);
+    g2g_source = (double*)_mm_malloc(sizeof(double)*g2g_source_len, VEC_ALIGN);
+    old_outer_scalar = (double*)_mm_malloc(sizeof(double)*scalar_flux_len, VEC_ALIGN);
+    old_inner_scalar = (double*)_mm_malloc(sizeof(double)*scalar_flux_len, VEC_ALIGN);
+    new_scalar = (double*)_mm_malloc(sizeof(double)*scalar_flux_len, VEC_ALIGN);
+    scalar_flux = (double*)_mm_malloc(sizeof(double)*scalar_flux_len, VEC_ALIGN);
+    flux_in = (double*)_mm_malloc(sizeof(double)*flux_in_len, VEC_ALIGN);
+    flux_out = (double*)_mm_malloc(sizeof(double)*flux_out_len, VEC_ALIGN);
+    scalar_mom = (double*)_mm_malloc(sizeof(double)*scalar_mom_len, VEC_ALIGN);
 
     // Read-only buffers initialised in Fortran code
     mu = mu_in;
@@ -196,7 +199,7 @@ void iterate(void)
 #pragma omp target if(OFFLOAD) \
             map(alloc: groups_todo[:groups_todo_len])
 #pragma omp parallel for
-//#pragma omp target teams distribute parallel for
+            //#pragma omp target teams distribute parallel for
             for (unsigned int g = 0; g < ng; g++)
             {
                 groups_todo[g] = g;
@@ -233,8 +236,27 @@ void iterate(void)
                 double t1 = omp_get_wtime();
 #endif
 
+//#pragma omp target update \
+                from(groups_todo[:groups_todo_len], scat_cs[:scat_cs_len], \
+                     total_cross_section[:total_cross_section_len], \
+                     dd_j[:dd_j_len], dd_k[:dd_k_len], time_delta[:time_delta_len], \
+                     denom[:denom_len], g2g_source[:g2g_source_len], source[:source_len])
+
+#pragma omp target update if(OFFLOAD) \
+                from(total_cross_section[:dd_k_len], dd_j[:dd_j_len])
+
+                    FILE* fp = fopen("temp.txt", "w");
+                    for(int ii = 0; ii < dd_j_len; ++ii)
+                    {
+                        fprintf(fp, "%.12E %.12E \n", dd_j[ii], dd_k[ii]);
+                    }
+                    fclose(fp);
+
                 // Sweep
                 perform_sweep(num_groups_todo);
+                
+//#pragma omp target update if(OFFLOAD) \
+                from(flux_in[:flux_in_len], flux_out[:flux_out_len])
 
 #ifdef TIMING
                 double t2 = omp_get_wtime();
@@ -295,11 +317,6 @@ void iterate(void)
         printf("Warning: did not converge\n");
     }
 
-    _mm_free(old_outer_scalar);
-    _mm_free(new_scalar);
-    _mm_free(old_inner_scalar);
-    _mm_free(groups_todo);
-
     PRINT_PROFILING_RESULTS;
 }
 
@@ -317,49 +334,49 @@ void reduce_angular(void)
     for(unsigned int o = 0; o < 8; ++o)
     {
 #pragma omp target if(OFFLOAD) \
-        map(to: weights[:weights_len], scat_coeff[:scat_coeff_len]) \
-        map(alloc: flux_in[:flux_in_len], flux_out[:flux_out_len], \
+        map(alloc: weights[:weights_len], scat_coeff[:scat_coeff_len], \
+                flux_in[:flux_in_len], flux_out[:flux_out_len], \
                 time_delta[:time_delta_len], scalar_flux[:scalar_flux_len], \
-                scalar_mom[:scalar_mom_len] )
+                scalar_mom[:scalar_mom_len])
 #pragma omp parallel for
-//#pragma omp target teams distribute parallel for \
-        //num_teams(59) num_threads(3) collapse(2)
-        for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
-        {
-//#pragma omp simd lastprivate(ind,o) aligned(weights:64)
-            for (unsigned int g = 0; g < ng; g++)
+            //#pragma omp target teams distribute parallel for \
+            //num_teams(59) num_threads(3) collapse(2)
+            for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
             {
-                const bool tg = time_delta(g) != 0.0;
-
-                for (unsigned int a = 0; a < nang; a++)
+                //#pragma omp simd lastprivate(ind,o) aligned(weights:64)
+                for (unsigned int g = 0; g < ng; g++)
                 {
-                    const double weight = weights(a);
-                    const double ang = angular(o,ind,g,a);
-                    const double ang_p = angular_prev(o,ind,g,a);
+                    const bool tg = time_delta(g) != 0.0;
 
-                    if (tg)
+                    for (unsigned int a = 0; a < nang; a++)
                     {
-                        scalar_flux[g+ind*ng] += weight * (0.5 * (ang + ang_p));
+                        const double weight = weights(a);
+                        const double ang = angular(o,ind,g,a);
+                        const double ang_p = angular_prev(o,ind,g,a);
 
-                        for (unsigned int l = 0; l < (cmom-1); l++)
+                        if (tg)
                         {
-                            scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
-                                scat_coeff(l+1,a,o) * weight * (0.5 * (ang + ang_p));
+                            scalar_flux[g+ind*ng] += weight * (0.5 * (ang + ang_p));
+
+                            for (unsigned int l = 0; l < (cmom-1); l++)
+                            {
+                                scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
+                                    scat_coeff(l+1,a,o) * weight * (0.5 * (ang + ang_p));
+                            }
                         }
-                    }
-                    else
-                    {
-                        scalar_flux[g+ind*ng] += weight * ang;
-
-                        for (unsigned int l = 0; l < (cmom-1); l++)
+                        else
                         {
-                            scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
-                                scat_coeff(l+1,a,o) * weight * ang;
+                            scalar_flux[g+ind*ng] += weight * ang;
+
+                            for (unsigned int l = 0; l < (cmom-1); l++)
+                            {
+                                scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
+                                    scat_coeff(l+1,a,o) * weight * ang;
+                            }
                         }
                     }
                 }
             }
-        }
     }
 
     STOP_PROFILING(__func__, true);
@@ -449,7 +466,7 @@ double* transpose_scat_coeff(double* scat_coeff_in)
         {
             for(unsigned int a = 0; a < nang; ++a)
             {
-                scat_coeff[l+a*cmom+o*(cmom*nang)] = 
+                scat_coeff(l,a,o) = 
                     scat_coeff_in[a+l*nang+o*(cmom*nang)];
             }
         }

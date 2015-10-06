@@ -49,9 +49,6 @@
 #define time_delta_len ng
 #define groups_todo_len ng
 #define g2g_source_len cmom*nx*ny*nz*ng
-#define old_outer_scalar_len nx*ny*nz*ng
-#define old_inner_scalar_len nx*ny*nz*ng
-#define new_scalar_len nx*ny*nz*ng
 #define scalar_flux_len nx*ny*nz*ng
 #define flux_in_len nang*nx*ny*nz*ng*noct
 #define flux_out_len nang*nx*ny*nz*ng*noct
@@ -67,5 +64,4 @@
 #define lma_len nmom
 #define xs_len nmat*ng
 #define scat_coeff_len cmom*nang*noct
-
 

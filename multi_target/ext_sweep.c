@@ -144,11 +144,11 @@ void sweep_cell(
     //TODO: Move the call to cell_index higher
 #pragma omp target if(OFFLOAD) \
     map(to: cell_index[:num_cells*ndim]) \
-    map(alloc: groups_todo[:groups_todo_len], dd_j[:dd_j_len], dd_k[:dd_k_len], time_delta[:time_delta_len], \
+    map(alloc: groups_todo[:groups_todo_len], dd_j[:dd_j_len], dd_k[:dd_k_len], \
             flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
             mu[:mu_len], source[:source_len], scat_coeff[:scat_coeff_len], \
             flux_in[:flux_in_len], flux_out[:flux_out_len], \
-            denom[:denom_len])
+            denom[:denom_len], time_delta[:time_delta_len])
 #pragma omp parallel for
 //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3) collapse(2)
@@ -265,7 +265,6 @@ void sweep_cell(
                 tmp_flux_k = tmp_flux_k * zeros[2];
                 psi = psi * zeros[3];
 
-                // Write values to global memory
                 flux_i(a,g,j,k) = tmp_flux_i;
                 flux_j(a,g,i,k) = tmp_flux_j;
                 flux_k(a,g,i,j) = tmp_flux_k;

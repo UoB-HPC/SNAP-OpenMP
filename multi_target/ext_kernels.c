@@ -12,8 +12,8 @@ void calc_denominator(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: total_cross_section[:total_cross_section_len], time_delta[:time_delta_len], mu[:mu_len]) \
-    map(alloc: denom[:denom_len], dd_j[:dd_j_len], dd_k[:dd_k_len])
+    map(alloc: total_cross_section[:total_cross_section_len], time_delta[:time_delta_len], \
+            mu[:mu_len], denom[:denom_len], dd_j[:dd_j_len], dd_k[:dd_k_len])
 #pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -38,8 +38,7 @@ void calc_time_delta(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: velocity[:velocity_len]) \
-    map(alloc: time_delta[:time_delta_len])
+    map(alloc: velocity[:velocity_len], time_delta[:time_delta_len])
 #pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -57,10 +56,10 @@ void calc_dd_coefficients(void)
     START_PROFILING;
 
     dd_i = 2.0 / dx;
+#pragma omp target update to(dd_i)
 
 #pragma omp target if(OFFLOAD) \
-    map(to: eta[:eta_len], xi[:xi_len]) \
-    map(alloc: dd_j[:dd_j_len], dd_k[:dd_k_len])
+    map(alloc: eta[:eta_len], xi[:xi_len], dd_j[:dd_j_len], dd_k[:dd_k_len])
 #pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -79,8 +78,7 @@ void calc_total_cross_section(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: xs[:xs_len], mat[:mat_len]) \
-    map(alloc: total_cross_section[:total_cross_section_len])
+    map(alloc: xs[:xs_len], mat[:mat_len], total_cross_section[:total_cross_section_len])
 #pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -106,8 +104,7 @@ void calc_scattering_cross_section(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: gg_cs[:gg_cs_len], mat[:mat_len]) \
-    map(alloc: scat_cs[:scat_cs_len])
+    map(alloc: gg_cs[:gg_cs_len], mat[:mat_len], scat_cs[:scat_cs_len])
 #pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -137,9 +134,8 @@ void calc_outer_source(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], mat[:mat_len]) \
-    map(alloc: g2g_source[:g2g_source_len], scalar_mom[:scalar_mom_len], \
-            scalar_flux[:scalar_flux_len])
+    map(alloc: fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], mat[:mat_len], lma[:lma_len], \
+            g2g_source[:g2g_source_len], scalar_mom[:scalar_mom_len], scalar_flux[:scalar_flux_len])
 #pragma omp parallel for collapse(4)
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3) collapse(4)
@@ -186,11 +182,10 @@ void calc_inner_source(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) \
-    map(to: lma[:lma_len]) \
     map(alloc: scat_cs[:scat_cs_len], source[:source_len], \
             g2g_source[:g2g_source_len], scalar_flux[:scalar_flux_len], \
-            scalar_mom[:scalar_mom_len])
-#pragma omp parallel for collapse(4)
+            scalar_mom[:scalar_mom_len], lma[:lma_len])
+#pragma omp parallel for
     //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3) collapse(4)
     for (unsigned int g = 0; g < ng; g++)
@@ -222,12 +217,15 @@ void calc_inner_source(void)
 
 void zero_edge_flux_buffers(void)
 {
-    int fi_len = nang*ng*ny*nz;
-    int fj_len = nang*ng*nx*nz;
-    int fk_len = nang*ng*nx*ny;
-
 #define MAX(A,B) (((A) > (B)) ? (A) : (B))
-    int max_length = MAX(MAX(fi_len, fj_len), fk_len);
+    int max_length = MAX(MAX(flux_i_len, flux_j_len), flux_k_len);
+
+//    for(int i = 0; i < max_length; ++i)
+//    {
+//        if(i < flux_i_len) flux_i[i] = 0.0;
+//        if(i < flux_j_len) flux_j[i] = 0.0;
+//        if(i < flux_k_len) flux_k[i] = 0.0;
+//    }
 
 #pragma omp target if(OFFLOAD) \
     map(alloc: flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len])
@@ -236,20 +234,25 @@ void zero_edge_flux_buffers(void)
     //num_teams(59) num_threads(3)
     for(int i = 0; i < max_length; ++i)
     {
-        if(i < fi_len) flux_i[i] = 0.0;
-        if(i < fj_len) flux_j[i] = 0.0;
-        if(i < fk_len) flux_k[i] = 0.0;
+        if(i < flux_i_len) flux_i[i] = 0.0;
+        if(i < flux_j_len) flux_j[i] = 0.0;
+        if(i < flux_k_len) flux_k[i] = 0.0;
     }
 }
 
 void zero_flux_moments_buffer(void)
 {
+//    for(int i = 0; i < scalar_mom_len; ++i)
+//    {
+//        scalar_mom[i] = 0.0;
+//    }
+
 #pragma omp target if(OFFLOAD) \
     map(alloc: scalar_mom[:scalar_mom_len])
 #pragma omp parallel for
     //#pragma omp target if(OFFLOAD) teams distribute parallel for \
     //num_teams(59) num_threads(3)
-    for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_mom_len; ++i)
     {
         scalar_mom[i] = 0.0;
     }
@@ -257,12 +260,18 @@ void zero_flux_moments_buffer(void)
 
 void zero_flux_in_out(void)
 {
+//    for(int i = 0; i < flux_in_len; ++i)
+//    {
+//        flux_in[i] = 0.0;
+//        flux_out[i] = 0.0;
+//    }
+
 #pragma omp target if(OFFLOAD) \
     map(alloc: flux_in[:flux_in_len], flux_out[:flux_out_len])
 #pragma omp parallel for
     //#pragma omp target if(OFFLOAD) teams distribute parallel for \
     //num_teams(59) num_threads(3)
-    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
+    for(int i = 0; i < flux_in_len; ++i)
     {
         flux_in[i] = 0.0;
         flux_out[i] = 0.0;
@@ -271,12 +280,17 @@ void zero_flux_in_out(void)
 
 void zero_scalar_flux(void)
 {
+//    for(int i = 0; i < scalar_flux_len; ++i)
+//    {
+//        scalar_flux[i] = 0.0;
+//    }
+
 #pragma omp target if(OFFLOAD) \
     map(alloc: scalar_flux[:scalar_flux_len])
 #pragma omp parallel for
     //#pragma omp target if(OFFLOAD) teams distribute parallel for \
     //num_teams(59) num_threads(3)
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         scalar_flux[i] = 0.0;
     }
@@ -301,7 +315,7 @@ bool check_convergence(
     }
 
 #pragma omp target if(OFFLOAD) \
-    map(alloc: old[:old_inner_scalar_len], new[:new_scalar_len], groups_todo[:groups_todo_len])
+    map(alloc: old[:scalar_flux_len], new[:scalar_flux_len], groups_todo[:groups_todo_len])
 #pragma omp parallel for
     //#pragma omp target if(OFFLOAD) teams distribute parallel for \
     //num_teams(59) num_threads(3)
@@ -372,7 +386,7 @@ void store_scalar_flux(double* to)
 #pragma omp parallel for
     //#pragma omp target if(OFFLOAD) teams distribute parallel for \
     //num_teams(59) num_threads(3)
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         to[i] = scalar_flux[i];
     }
