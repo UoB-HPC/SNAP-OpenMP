@@ -1,5 +1,7 @@
 #pragma once
 
+#define VEC_ALIGN 64
+
 #pragma omp declare target
 
 // This file contains a list of the global problem variables
@@ -13,6 +15,7 @@ int noct;
 int cmom;
 int nmom;
 int nmat;
+int ndim;
 
 int ichunk;
 int timesteps;

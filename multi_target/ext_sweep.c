@@ -12,7 +12,7 @@ plane *compute_sweep_order(void)
     START_PROFILING;
 
     unsigned int nplanes = ichunk + ny + nz - 2;
-    plane *planes = (plane *)malloc(sizeof(plane)*nplanes);
+    plane *planes = (plane *)_mm_malloc(sizeof(plane)*nplanes, VEC_ALIGN);
     for (unsigned int i = 0; i < nplanes; i++)
     {
         planes[i].num_cells = 0;
@@ -34,7 +34,7 @@ plane *compute_sweep_order(void)
     // Allocate the memory for each plane
     for (unsigned int i = 0; i < nplanes; i++)
     {
-        planes[i].cells = (struct cell *)malloc(sizeof(struct cell)*planes[i].num_cells);
+        planes[i].cells = (double*)_mm_malloc(sizeof(double)*planes[i].num_cells*ndim, VEC_ALIGN);
         planes[i].index = 0;
     }
 
@@ -46,10 +46,10 @@ plane *compute_sweep_order(void)
             for (unsigned int i = 0; i < ichunk; i++)
             {
                 unsigned int n = i + j + k;
-                unsigned int idx = planes[n].index;
-                planes[n].cells[idx].i = i;
-                planes[n].cells[idx].j = j;
-                planes[n].cells[idx].k = k;
+                unsigned int idx = planes[n].index*ndim;
+                planes[n].cells[idx] = i;
+                planes[n].cells[idx+1] = j;
+                planes[n].cells[idx+2] = k;
                 planes[n].index += 1;
             }
         }
@@ -98,7 +98,7 @@ void sweep_octant(
 	for (unsigned int d = 0; d < ndiag; d++)
 	{
 		sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
-			   	planes[d].cells, groups_todo, num_groups_todo, planes[d].num_cells);
+			   	planes[d].cells, num_groups_todo, planes[d].num_cells);
 	}
 }
 
@@ -121,10 +121,10 @@ void perform_sweep(
 	// Free planes
 	for (unsigned int i = 0; i < ndiag; i++)
 	{
-		free(planes[i].cells);
+		_mm_free(planes[i].cells);
 	}
 
-	free(planes);
+	_mm_free(planes);
 }
 
 // Solve the transport equations for a single angle in a single cell for a single group
@@ -135,15 +135,21 @@ void sweep_cell(
 		const unsigned int oct,
 		const double* restrict l_flux_in,
 		double* restrict l_flux_out,
-		const struct cell * restrict cell_index,
-		const unsigned int * restrict groups_todo,
+		const double * restrict cell_index,
 		const unsigned int num_groups_todo,
 		const unsigned int num_cells)
 {
     START_PROFILING;
 
-#pragma omp target 
-#pragma omp parallel for collapse(2)
+    //TODO: Move the call to cell_index higher
+#pragma omp target if(OFFLOAD) \
+    map(to: cell_index[:num_cells*ndim]) \
+    map(alloc: groups_todo[:groups_todo_len], dd_j[:dd_j_len], dd_k[:dd_k_len], time_delta[:time_delta_len], \
+            flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
+            mu[:mu_len], source[:source_len], scat_coeff[:scat_coeff_len], \
+            flux_in[:flux_in_len], flux_out[:flux_out_len], \
+            denom[:denom_len])
+#pragma omp parallel for
 //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3) collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
@@ -154,9 +160,9 @@ void sweep_cell(
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group
-                const unsigned int i = (istep > 0) ? cell_index[nc].i : nx - cell_index[nc].i - 1;
-                const unsigned int j = (jstep > 0) ? cell_index[nc].j : ny - cell_index[nc].j - 1;
-                const unsigned int k = (kstep > 0) ? cell_index[nc].k : nz - cell_index[nc].k - 1;
+                const unsigned int i = (istep > 0) ? cell_index[nc*ndim] : nx - cell_index[nc*ndim] - 1;
+                const unsigned int j = (jstep > 0) ? cell_index[nc*ndim+1] : ny - cell_index[nc*ndim+1] - 1;
+                const unsigned int k = (kstep > 0) ? cell_index[nc*ndim+2] : nz - cell_index[nc*ndim+2] - 1;
                 const unsigned int g = groups_todo[tg];
 
                 // Assume transmissive (vacuum boundaries) and that we

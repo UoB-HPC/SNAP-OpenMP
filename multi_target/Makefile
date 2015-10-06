@@ -6,7 +6,7 @@
 DBG 	 = no
 MIC_MODE = offload
 PROFILER = yes
-COPTION  = -qopt-report=5 -qopt-report-phase=vec
+COPTION  = #-qopt-report=5 -qopt-report-phase=vec
 FOPTION  = 
 OPENMP 	 = -qopenmp
 TARGET 	 = snap
@@ -18,6 +18,8 @@ ifeq ($(MIC_MODE), native)
   MIC = -mmic
 else ifeq ($(MIC_MODE), offload)
   MIC = -DOFFLOAD=1
+else ifeq ($(MIC_MODE), none)
+  MIC = -DOFFLOAD=0
 endif
 
 # Enables debugging mode

@@ -14,7 +14,7 @@ void ext_solve_(
         double *mu, 
         double *eta, 
         double *xi,
-        double *scat_coeff,
+        double *scat_coeff_in,
         double *weights,
         double *velocity,
         double *xs,
@@ -23,22 +23,25 @@ void ext_solve_(
         double *gg_cs,
         int *lma)
 {
-    initialise_device_memory(mu, eta, xi, scat_coeff, weights, velocity,
+    initialise_device_memory(mu, eta, xi, scat_coeff_in, weights, velocity,
             xs, mat, fixed_source, gg_cs, lma);
 
+#pragma omp target update to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
+        nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
+        epsi, tolr, dd_i, global_timestep)
 #pragma omp target data \
     map(to: mu[:nang], eta[:nang], xi[:nang], \
-            scat_coeff[:nang*cmom*noct], weights[:nang], mat[:nx*ny*nz], \
-            velocity[:ng], xs[:nmat*ng], fixed_source[:nx*ny*nz*ng], \
-            gg_cs[:nmat*nmom*ng*ng], lma[:nmom]) \
-    map(alloc:total_cross_section[:nx*ny*nz*ng], dd_j[:nang], dd_k[:nang],\
-            denom[:nang*nx*ny*nz*ng], time_delta[:ng], groups_todo[:ng], \
-            g2g_source[:cmom*nx*ny*nz*ng], old_outer_scalar[:nx*ny*nz*ng], \
-            old_inner_scalar[:nx*ny*nz*ng], source[:cmom*nx*ny*nz*ng], \
-            flux_i[:nang*ny*nz*ng], flux_j[:nang*nx*nz*ng], flux_k[:nang*nx*ny*ng], \
-            new_scalar[:nx*ny*nz*ng]) \
-    //map(from: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
-            flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
+            scat_coeff[:scat_coeff_len], weights[:weights_len], mat[:mat_len], \
+            velocity[:velocity_len], xs[:xs_len], fixed_source[:fixed_source_len], \
+            gg_cs[:gg_cs_len], lma[:lma_len]) \
+    map(alloc:total_cross_section[:total_cross_section_len], dd_j[:dd_j_len], dd_k[:dd_k_len],\
+            denom[:denom_len], time_delta[:time_delta_len], groups_todo[:groups_todo_len], \
+            g2g_source[:g2g_source_len], old_outer_scalar[:old_outer_scalar_len], \
+            old_inner_scalar[:old_inner_scalar_len], source[:source_len], \
+            flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
+            new_scalar[:new_scalar_len], scat_cs[:scat_cs_len]) \
+    map(from: scalar_flux[:scalar_flux_len], flux_in[:flux_in_len],\
+            flux_out[:flux_out_len], scalar_mom[:scalar_mom_len])
     {
         zero_flux_in_out();
         zero_scalar_flux();
@@ -72,6 +75,8 @@ void ext_initialise_parameters_(
     noct = *noct_;
     cmom = *cmom_;
     nmom = *nmom_;
+    ndim = 3;
+
     ichunk = *ichunk_;
     dx = *dx_;
     dy = *dy_;
@@ -188,7 +193,8 @@ void iterate(void)
             // Reset the inner convergence list
             bool inner_done = false;
 
-#pragma omp target
+#pragma omp target if(OFFLOAD) \
+            map(alloc: groups_todo[:groups_todo_len])
 #pragma omp parallel for
 //#pragma omp target teams distribute parallel for
             for (unsigned int g = 0; g < ng; g++)
@@ -235,11 +241,9 @@ void iterate(void)
                 printf("sweep took: %lfs\n", t2-t1);
 #endif
 
-#pragma omp target update from(scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
-            flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
-
                 // Scalar flux
                 reduce_angular();
+
 #ifdef TIMING
                 double t3 = omp_get_wtime();
                 printf("reductions took: %lfs\n", t3-t2);
@@ -312,7 +316,11 @@ void reduce_angular(void)
 
     for(unsigned int o = 0; o < 8; ++o)
     {
-//#pragma omp target
+#pragma omp target if(OFFLOAD) \
+        map(to: weights[:weights_len], scat_coeff[:scat_coeff_len]) \
+        map(alloc: flux_in[:flux_in_len], flux_out[:flux_out_len], \
+                time_delta[:time_delta_len], scalar_flux[:scalar_flux_len], \
+                scalar_mom[:scalar_mom_len] )
 #pragma omp parallel for
 //#pragma omp target teams distribute parallel for \
         //num_teams(59) num_threads(3) collapse(2)
