@@ -11,26 +11,26 @@
 #include "ext_profiler.h"
 
 void ext_solve_(
-        double *mu, 
-        double *eta, 
-        double *xi,
+        double *mu_in, 
+        double *eta_in, 
+        double *xi_in,
         double *scat_coeff_in,
-        double *weights,
-        double *velocity,
-        double *xs,
-        int *mat,
-        double *fixed_source,
-        double *gg_cs,
-        int *lma)
+        double *weights_in,
+        double *velocity_in,
+        double *xs_in,
+        int *mat_in,
+        double *fixed_source_in,
+        double *gg_cs_in,
+        int *lma_in)
 {
-    initialise_device_memory(mu, eta, xi, scat_coeff_in, weights, velocity,
-            xs, mat, fixed_source, gg_cs, lma);
+    initialise_device_memory(mu_in, eta_in, xi_in, scat_coeff_in, weights_in, 
+            velocity_in, xs_in, mat_in, fixed_source_in, gg_cs_in, lma_in);
 
-#pragma omp target update to(nx, ny, nz, ng, nang, ndim, noct, cmom, nmom, \
+#pragma omp target update if(OFFLOAD) to(nx, ny, nz, ng, nang, ndim, noct, cmom, nmom, \
         nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
         epsi, tolr, dd_i, global_timestep)
-#pragma omp target data \
-    map(to: mu[:nang], eta[:nang], xi[:nang], scat_coeff[:scat_coeff_len], \
+#pragma omp target data if(OFFLOAD) \
+    map(to: mu[:mu_len], eta[:eta_len], xi[:xi_len], scat_coeff[:scat_coeff_len], \
             weights[:weights_len], mat[:mat_len], velocity[:velocity_len], \
             xs[:xs_len], fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], lma[:lma_len]) \
     map(alloc: total_cross_section[:total_cross_section_len], dd_j[:dd_j_len], dd_k[:dd_k_len],\
@@ -183,6 +183,7 @@ void iterate(void)
         unsigned int tot_outers = 0;
         unsigned int tot_inners = 0;
         global_timestep = t;
+#pragma omp target update if(OFFLOAD) to(global_timestep)
 
         // Calculate data required at the beginning of each timestep
         zero_scalar_flux();
@@ -236,27 +237,36 @@ void iterate(void)
                 double t1 = omp_get_wtime();
 #endif
 
-//#pragma omp target update \
+//#pragma omp target update if(OFFLOAD) \
                 from(groups_todo[:groups_todo_len], scat_cs[:scat_cs_len], \
                      total_cross_section[:total_cross_section_len], \
                      dd_j[:dd_j_len], dd_k[:dd_k_len], time_delta[:time_delta_len], \
-                     denom[:denom_len], g2g_source[:g2g_source_len], source[:source_len])
+                     denom[:denom_len], g2g_source[:g2g_source_len], source[:source_len], \
+                     flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len],\
+                     scat_coeff[:scat_coeff_len], mu[:mu_len])
 
-#pragma omp target update if(OFFLOAD) \
-                from(total_cross_section[:dd_k_len], dd_j[:dd_j_len])
 
-                    FILE* fp = fopen("temp.txt", "w");
-                    for(int ii = 0; ii < dd_j_len; ++ii)
-                    {
-                        fprintf(fp, "%.12E %.12E \n", dd_j[ii], dd_k[ii]);
-                    }
-                    fclose(fp);
+                //FILE* fp = fopen("temp.txt", "w");
+                //for(int ii = 0; ii < weights_len; ++ii)
+                //{
+                //    fprintf(fp, "%.12E \n", weights[ii]);
+                //}
+                //fclose(fp);
 
                 // Sweep
                 perform_sweep(num_groups_todo);
                 
 //#pragma omp target update if(OFFLOAD) \
                 from(flux_in[:flux_in_len], flux_out[:flux_out_len])
+
+                //FILE* fp = fopen("temp.txt", "w");
+                //for(int ii = 0; ii < 1000000; ++ii)
+                //{
+                //    fprintf(fp, "%.12E %.12E\n", flux_in[ii], flux_out[ii]);
+                //}
+                //fclose(fp);
+
+ 
 
 #ifdef TIMING
                 double t2 = omp_get_wtime();
@@ -458,7 +468,7 @@ double* transpose_scat_coeff(double* scat_coeff_in)
 {
     START_PROFILING;
 
-    double* scat_coeff = (double*)_mm_malloc(sizeof(double)*nang*cmom*noct, VEC_ALIGN);
+    double* scat_coeff = (double*)_mm_malloc(sizeof(double)*scat_coeff_len, VEC_ALIGN);
 
     for(unsigned int o = 0; o < noct; ++o)
     {

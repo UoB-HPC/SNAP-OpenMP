@@ -34,7 +34,7 @@ plane *compute_sweep_order(void)
     // Allocate the memory for each plane
     for (unsigned int i = 0; i < nplanes; i++)
     {
-        planes[i].cells = (double*)_mm_malloc(sizeof(double)*planes[i].num_cells*ndim, VEC_ALIGN);
+        planes[i].cells = (int*)_mm_malloc(sizeof(int)*planes[i].num_cells*ndim, VEC_ALIGN);
         planes[i].index = 0;
     }
 
@@ -62,11 +62,11 @@ plane *compute_sweep_order(void)
 
 // Sweep over the grid and compute the angular flux
 void sweep_octant(
-		const unsigned int timestep, 
-		const unsigned int oct, 
-		const unsigned int ndiag, 
-		const plane *planes, 
-		const unsigned int num_groups_todo)
+        const unsigned int timestep, 
+        const unsigned int oct, 
+        const unsigned int ndiag, 
+        const plane *planes, 
+        const unsigned int num_groups_todo)
 {
     // Determine the cell step parameters for the given octant
     // Create the list of octant co-ordinates in order
@@ -91,72 +91,70 @@ void sweep_octant(
     int jstep = (yhi == ny) ? -1 : 1;
     int kstep = (zhi == nz) ? -1 : 1;
 
-    size_t offset = oct*nang*nx*ny*nz*ng;
-	double* l_flux_in = (timestep % 2 == 0 ? flux_in : flux_out) + offset;
-	double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in) + offset;
+    double* l_flux_in = (timestep % 2 == 0 ? flux_in : flux_out);
+    double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in);
 
-	for (unsigned int d = 0; d < ndiag; d++)
-	{
-		sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
-			   	planes[d].cells, num_groups_todo, planes[d].num_cells);
-	}
+    for (unsigned int d = 0; d < ndiag; d++)
+    {
+        sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
+                planes[d].cells, num_groups_todo, planes[d].num_cells);
+    }
 }
 
 // Perform a sweep over the grid for all the octants
 void perform_sweep(
-		unsigned int num_groups_todo)
+        unsigned int num_groups_todo)
 {
-	// Number of planes in this octant
-	unsigned int ndiag = ichunk + ny + nz - 2;
+    // Number of planes in this octant
+    unsigned int ndiag = ichunk + ny + nz - 2;
 
-	// Get the order of cells to enqueue
-	plane *planes = compute_sweep_order();
+    // Get the order of cells to enqueue
+    plane *planes = compute_sweep_order();
 
-	for (int o = 0; o < noct; o++)
-	{
-		sweep_octant(global_timestep, o, ndiag, planes, num_groups_todo);
-		zero_edge_flux_buffers();
-	}
+    for (int o = 0; o < noct; o++)
+    {
+        sweep_octant(global_timestep, o, ndiag, planes, num_groups_todo);
+        zero_edge_flux_buffers();
+    }
 
-	// Free planes
-	for (unsigned int i = 0; i < ndiag; i++)
-	{
-		_mm_free(planes[i].cells);
-	}
+    // Free planes
+    for (unsigned int i = 0; i < ndiag; i++)
+    {
+        _mm_free(planes[i].cells);
+    }
 
-	_mm_free(planes);
+    _mm_free(planes);
 }
+
 
 // Solve the transport equations for a single angle in a single cell for a single group
 void sweep_cell(
-		const int istep,
-		const int jstep,
-		const int kstep,
-		const unsigned int oct,
-		const double* restrict l_flux_in,
-		double* restrict l_flux_out,
-		const double * restrict cell_index,
-		const unsigned int num_groups_todo,
-		const unsigned int num_cells)
+        const int istep,
+        const int jstep,
+        const int kstep,
+        const unsigned int oct,
+        const double* restrict l_flux_in,
+        double* restrict l_flux_out,
+        const int * cell_index,
+        const unsigned int num_groups_todo,
+        const unsigned int num_cells)
 {
-    START_PROFILING;
-
     //TODO: Move the call to cell_index higher
 #pragma omp target if(OFFLOAD) \
-    map(to: cell_index[:num_cells*ndim]) \
+    map(to: cell_index[:num_cells*ndim], dd_i) \
     map(alloc: groups_todo[:groups_todo_len], dd_j[:dd_j_len], dd_k[:dd_k_len], \
             flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
             mu[:mu_len], source[:source_len], scat_coeff[:scat_coeff_len], \
             flux_in[:flux_in_len], flux_out[:flux_out_len], \
             denom[:denom_len], time_delta[:time_delta_len])
 #pragma omp parallel for
-//#pragma omp target teams distribute parallel for \
+    //#pragma omp target teams distribute parallel for \
     //num_teams(59) num_threads(3) collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
-//#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:64)    
+            //#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:64)    
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group
@@ -188,7 +186,7 @@ void sweep_cell(
                 // Add contribution from last timestep flux if time-dependant
                 if (time_delta(g) != 0.0)
                 {
-                    psi += time_delta(g) * l_flux_in(a,g,i,j,k);
+                    psi += time_delta(g) * l_flux_in(oct,a,g,i,j,k);
                 }
 
                 psi *= denom(a,g,i,j,k);
@@ -201,7 +199,7 @@ void sweep_cell(
                 // Time differencing on final flux value
                 if (time_delta(g) != 0.0)
                 {
-                    psi = 2.0 * psi - l_flux_in(a,g,i,j,k);
+                    psi = 2.0 * psi - l_flux_in(oct,a,g,i,j,k);
                 }
 
                 // Perform the fixup loop
@@ -231,7 +229,7 @@ void sweep_cell(
 
                     if (time_delta(g) != 0.0)
                     {
-                        psi += time_delta(g) * l_flux_in(a,g,i,j,k) * (1.0+zeros[3]);
+                        psi += time_delta(g) * l_flux_in(oct,a,g,i,j,k) * (1.0+zeros[3]);
                     }
                     psi = 0.5*psi + source_term;
                     double recalc_denom = total_cross_section(g,i,j,k);
@@ -255,7 +253,7 @@ void sweep_cell(
                     tmp_flux_k = 2.0 * psi - flux_k(a,g,i,j);
                     if (time_delta(g) != 0.0)
                     {
-                        psi = 2.0*psi - l_flux_in(a,g,i,j,k);
+                        psi = 2.0*psi - l_flux_in(oct,a,g,i,j,k);
                     }
                 }
 
@@ -268,7 +266,7 @@ void sweep_cell(
                 flux_i(a,g,j,k) = tmp_flux_i;
                 flux_j(a,g,i,k) = tmp_flux_j;
                 flux_k(a,g,i,j) = tmp_flux_k;
-                l_flux_out(a,g,i,j,k) = psi;
+                l_flux_out(oct,a,g,i,j,k) = psi;
             }
         }
     }

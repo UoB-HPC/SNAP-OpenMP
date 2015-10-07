@@ -3,7 +3,7 @@
 typedef struct 
 {
     unsigned int num_cells;
-    double* cells;
+    int* cells;
 
     // index is an index into the cells array for when storing the cell indexes
     unsigned int index;
@@ -28,7 +28,7 @@ void sweep_cell(
 		const unsigned int oct,
 		const double* restrict l_flux_in,
 		double* restrict l_flux_out,
-		const double * restrict cell_index,
+		const int * restrict cell_index,
 		const unsigned int num_groups_todo,
 		const unsigned int num_cells);
 

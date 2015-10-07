@@ -55,18 +55,19 @@ void calc_dd_coefficients(void)
 {
     START_PROFILING;
 
-    dd_i = 2.0 / dx;
-#pragma omp target update to(dd_i)
-
 #pragma omp target if(OFFLOAD) \
     map(alloc: eta[:eta_len], xi[:xi_len], dd_j[:dd_j_len], dd_k[:dd_k_len])
-#pragma omp parallel for
-    //#pragma omp target teams distribute parallel for \
-    //num_teams(59) num_threads(3)
-    for(int a = 0; a < nang; ++a)
     {
-        dd_j(a) = (2.0/dy)*eta(a);
-        dd_k(a) = (2.0/dz)*xi(a);
+        dd_i = 2.0 / dx;
+
+#pragma omp parallel for
+        //#pragma omp target teams distribute parallel for \
+        //num_teams(59) num_threads(3)
+        for(int a = 0; a < nang; ++a)
+        {
+            dd_j(a) = (2.0/dy)*eta(a);
+            dd_k(a) = (2.0/dz)*xi(a);
+        }
     }
 
     STOP_PROFILING(__func__, true);
@@ -217,36 +218,33 @@ void calc_inner_source(void)
 
 void zero_edge_flux_buffers(void)
 {
-#define MAX(A,B) (((A) > (B)) ? (A) : (B))
-    int max_length = MAX(MAX(flux_i_len, flux_j_len), flux_k_len);
-
-//    for(int i = 0; i < max_length; ++i)
-//    {
-//        if(i < flux_i_len) flux_i[i] = 0.0;
-//        if(i < flux_j_len) flux_j[i] = 0.0;
-//        if(i < flux_k_len) flux_k[i] = 0.0;
-//    }
+#pragma omp target if(OFFLOAD) \
+    map(alloc: flux_i[:flux_i_len])
+#pragma omp parallel for
+    for(int i = 0; i < flux_i_len; ++i)
+    {
+        flux_i[i] = 0.0;
+    }
 
 #pragma omp target if(OFFLOAD) \
-    map(alloc: flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len])
+    map(alloc: flux_j[:flux_j_len])
 #pragma omp parallel for
-    //#pragma omp target if(OFFLOAD) teams distribute parallel for \
-    //num_teams(59) num_threads(3)
-    for(int i = 0; i < max_length; ++i)
+    for(int i = 0; i < flux_j_len; ++i)
     {
-        if(i < flux_i_len) flux_i[i] = 0.0;
-        if(i < flux_j_len) flux_j[i] = 0.0;
-        if(i < flux_k_len) flux_k[i] = 0.0;
+        flux_j[i] = 0.0;
+    }
+
+#pragma omp target if(OFFLOAD) \
+    map(alloc: flux_k[:flux_k_len])
+#pragma omp parallel for
+    for(int i = 0; i < flux_k_len; ++i)
+    {
+        flux_k[i] = 0.0;
     }
 }
 
 void zero_flux_moments_buffer(void)
 {
-//    for(int i = 0; i < scalar_mom_len; ++i)
-//    {
-//        scalar_mom[i] = 0.0;
-//    }
-
 #pragma omp target if(OFFLOAD) \
     map(alloc: scalar_mom[:scalar_mom_len])
 #pragma omp parallel for
@@ -260,12 +258,6 @@ void zero_flux_moments_buffer(void)
 
 void zero_flux_in_out(void)
 {
-//    for(int i = 0; i < flux_in_len; ++i)
-//    {
-//        flux_in[i] = 0.0;
-//        flux_out[i] = 0.0;
-//    }
-
 #pragma omp target if(OFFLOAD) \
     map(alloc: flux_in[:flux_in_len], flux_out[:flux_out_len])
 #pragma omp parallel for
@@ -280,11 +272,6 @@ void zero_flux_in_out(void)
 
 void zero_scalar_flux(void)
 {
-//    for(int i = 0; i < scalar_flux_len; ++i)
-//    {
-//        scalar_flux[i] = 0.0;
-//    }
-
 #pragma omp target if(OFFLOAD) \
     map(alloc: scalar_flux[:scalar_flux_len])
 #pragma omp parallel for
