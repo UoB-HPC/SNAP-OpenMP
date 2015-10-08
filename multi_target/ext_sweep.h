@@ -1,9 +1,14 @@
 #pragma once
 
+struct cell 
+{
+    unsigned int i,j,k;
+};
+
 typedef struct 
 {
     unsigned int num_cells;
-    int* cells;
+    struct cell *cells;
 
     // index is an index into the cells array for when storing the cell indexes
     unsigned int index;
@@ -28,7 +33,7 @@ void sweep_cell(
 		const unsigned int oct,
 		const double* restrict l_flux_in,
 		double* restrict l_flux_out,
-		const int * restrict cell_index,
+		const struct cell * restrict cell_index,
+		const unsigned int * restrict groups_todo,
 		const unsigned int num_groups_todo,
 		const unsigned int num_cells);
-

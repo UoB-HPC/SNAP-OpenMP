@@ -7,6 +7,7 @@
     #define MIC_DEVICE 0
 #endif
 
+#define VEC_ALIGN 64
 
 // Entry point for completing the solve
 void ext_solve_(
@@ -35,7 +36,7 @@ void initialise_parameters(
     double *epsi_, double *tolr_);
 
 // Allocates buffers on the device
-void initialise_device_memory(
+void initialise_host_memory(
 		double *mu_in, 
 		double *eta_in, 
 		double *xi_in,
