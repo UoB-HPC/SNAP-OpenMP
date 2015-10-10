@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+void initialise_device_memory(void);
 void zero_edge_flux_buffers(void);
 void zero_flux_moments_buffer(void);
 void zero_flux_in_out(void);

@@ -42,11 +42,7 @@ void ext_solve_(
     map(tofrom: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
             flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
     {
-        zero_scalar_flux();
-        zero_edge_flux_buffers();
-        zero_flux_moments_buffer();
-        zero_flux_in_out();
-
+        initialise_device_memory();
         iterate();
     }
 
@@ -303,10 +299,10 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target teams num_teams(1) thread_limit(236) if(OFFLOAD)
     for(unsigned int o = 0; o < 8; ++o)
     {
-#pragma omp parallel for
+#pragma omp distribute parallel for
         for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
         {
 #pragma omp simd lastprivate(ind,o) aligned(weights:64)

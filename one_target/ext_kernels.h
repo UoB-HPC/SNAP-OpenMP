@@ -6,6 +6,7 @@
 
 void zero_edge_flux_buffers(void);
 void zero_flux_moments_buffer(void);
+void zero_flux_in_out(void);
 void zero_scalar_flux(void);
 void calc_inner_source(void);
 void calc_outer_source(void);

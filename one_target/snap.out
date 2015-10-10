@@ -1,7 +1,7 @@
  SNAP: SN (Discrete Ordinates) Application Proxy
  Version Number..  1.01 
  Version Date..  03-25-2013
- Ran on 10- 6-2015 at time 12:35:18
+ Ran on 10-10-2015 at time 14:27:13
 
 ********************************************************************************
 
@@ -15,9 +15,9 @@
      nthreads=    16
      nnested=   0
      ndimen=  3
-     nx=    16
-     ny=    16
-     nz=    16
+     nx=     8
+     ny=     8
+     nz=     8
      lx=  4.8000E+00
      ly=  4.8000E+00
      lz=  4.8000E+00
@@ -39,20 +39,22 @@
 
 ********************************************************************************
 
+   *WARNING: INPUT_CHECK: ICHUNK cannot exceed NX; reset to NX     
+
           Calculation Run-time Parameters Echo
 ********************************************************************************
 
   Geometry
     ndimen = 3
-    nx =    16
-    ny =    16
-    nz =    16
+    nx =     8
+    ny =     8
+    nz =     8
     lx =  4.8000E+00
     ly =  4.8000E+00
     lz =  4.8000E+00
-    dx =  3.0000E-01
-    dy =  3.0000E-01
-    dz =  3.0000E-01
+    dx =  6.0000E-01
+    dy =  6.0000E-01
+    dz =  6.0000E-01
 
   Sn
     nmom = 2
@@ -208,7 +210,7 @@
     Source strength per cell (where applied) = 1.0
     Source map:
         Starting cell: (     1,     1,     1 )
-        Ending cell:   (    16,    16,    16 )
+        Ending cell:   (     8,     8,     8 )
 
   Pseudo Cross Sections Data
     ng =  50
@@ -356,7 +358,7 @@
  ******************************
   Time Cycle   1
   Outer
-    1    Dfmxo= 9.2113E-01    No. Inners=   50
+    1    Dfmxo= 9.2704E-01    No. Inners=   50
 
   ***UNCONVERGED*** Stopping Iterations!!
   Cycle=   1    Time= 5.0000E-01    No. Outers=   2    No. Inners=   50
@@ -372,20 +374,20 @@
 
   Code Section                          Time (seconds)
  **************                        ****************
-    Parallel Setup                       1.3111E-03
-    Input                                2.2697E-04
-    Setup                                2.3839E-03
-    Solve                                2.1341E+01
-       Parameter Setup                   9.7899E-01
-       Outer Source                      7.8461E-03
-       Inner Iterations                  3.7742E-01
-          Inner Source                   5.8389E-04
-          Transport Sweeps               3.7630E-01
-          Inner Misc Ops                 5.3310E-04
-       Solution Misc Ops                 1.9977E+01
-    Output                               1.0967E-05
-  Total Execution time                   2.8244E+01
+    Parallel Setup                       1.6260E-03
+    Input                                2.8610E-04
+    Setup                                1.6191E-03
+    Solve                                2.6291E+00
+       Parameter Setup                   1.2363E-01
+       Outer Source                      8.6498E-04
+       Inner Iterations                  5.0048E-02
+          Inner Source                   9.5129E-05
+          Transport Sweeps               4.9374E-02
+          Inner Misc Ops                 5.7888E-04
+       Solution Misc Ops                 2.4546E+00
+    Output                               4.0531E-06
+  Total Execution time                   3.3752E+00
 
-  Grind Time (nanoseconds)         9.5778E+01
+  Grind Time (nanoseconds)         9.4393E+01
 
 ********************************************************************************

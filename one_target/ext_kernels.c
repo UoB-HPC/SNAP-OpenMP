@@ -180,6 +180,21 @@ void calc_inner_source(void)
     STOP_PROFILING(__func__, true);
 }
 
+void zero_flux_in_out(void)
+{
+#pragma omp parallel for
+    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
+    {
+        flux_in[i] = 0.0;
+    }
+
+#pragma omp parallel for
+    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
+    {
+        flux_out[i] = 0.0;
+    }
+}
+
 void zero_edge_flux_buffers(void)
 {
     int fi_len = nang*ng*ny*nz;

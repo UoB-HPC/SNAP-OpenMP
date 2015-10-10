@@ -11,17 +11,17 @@
 #include "ext_profiler.h"
 
 void ext_solve_(
-		double *mu, 
-		double *eta, 
-		double *xi,
-		double *scat_coeff,
-		double *weights,
-		double *velocity,
-		double *xs,
-		int *mat,
-		double *fixed_source,
-		double *gg_cs,
-		int *lma)
+        double *mu, 
+        double *eta, 
+        double *xi,
+        double *scat_coeff,
+        double *weights,
+        double *velocity,
+        double *xs,
+        int *mat,
+        double *fixed_source,
+        double *gg_cs,
+        int *lma)
 {
     initialise_host_memory();
 
@@ -30,11 +30,11 @@ void ext_solve_(
         epsi, tolr, dd_i, global_timestep)
 
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
-        map(to: mu[:nang], eta[:nang], xi[:nang], \
+    map(to: mu[:nang], eta[:nang], xi[:nang], \
             scat_coeff[:nang*cmom*noct], weights[:nang], mat[:nx*ny*nz], \
             velocity[:ng], xs[:nmat*ng], fixed_source[:nx*ny*nz*ng], \
             gg_cs[:nmat*nmom*ng*ng], lma[:nmom]) \
-        map(from: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
+    map(from: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
             flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
     {
         initialise_device_memory(mu, eta, xi, scat_coeff, weights, velocity,
@@ -114,12 +114,6 @@ void initialise_device_memory(
 {
     START_PROFILING;
 
-    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
-    {
-        flux_in[i] = 0.0;
-        flux_out[i] = 0.0;
-    }
-
     // flux_i(nang,ny,nz,ng)     - Working psi_x array (edge pointers)
     // flux_j(nang,ichunk,nz,ng) - Working psi_y array
     // flux_k(nang,ichunk,ny,ng) - Working psi_z array
@@ -140,6 +134,7 @@ void initialise_device_memory(
     zero_scalar_flux();
     zero_edge_flux_buffers();
     zero_flux_moments_buffer();
+    zero_flux_in_out();
 
     // Read-only buffers initialised in Fortran code
     mu = mu_in;

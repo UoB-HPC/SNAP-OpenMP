@@ -142,9 +142,9 @@ void sweep_cell(
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)\
+#pragma omp target teams num_teams(1) thread_limit(236) if(OFFLOAD)\
     map(to: cell_index[:num_cells]) 
-#pragma omp parallel for collapse(2)
+#pragma omp distribute parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)

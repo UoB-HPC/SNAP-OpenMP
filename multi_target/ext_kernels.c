@@ -49,13 +49,13 @@ void calc_dd_coefficients(void)
 
 #pragma omp target if(OFFLOAD)
     {
-    dd_i = 2.0 / dx;
+        dd_i = 2.0 / dx;
 
-    for(int a = 0; a < nang; ++a)
-    {
-        dd_j(a) = (2.0/dy)*eta(a);
-        dd_k(a) = (2.0/dz)*xi(a);
-    }
+        for(int a = 0; a < nang; ++a)
+        {
+            dd_j(a) = (2.0/dy)*eta(a);
+            dd_k(a) = (2.0/dz)*xi(a);
+        }
     }
 
     STOP_PROFILING(__func__, true);
@@ -321,6 +321,21 @@ bool check_convergence(
 
     return r;
 }
+
+void initialise_device_memory(void)
+{
+    zero_scalar_flux();
+    zero_edge_flux_buffers();
+    zero_flux_moments_buffer();
+    zero_flux_in_out();
+
+#pragma omp target if(OFFLOAD)
+#pragma omp parallel for
+    for(int ii = 0; ii < g2g_source_len; ++ii)
+    {
+        g2g_source[ii] = 0.0;
+    }
+}   
 
 // Copies the value of scalar flux
 void store_scalar_flux(double* to)
