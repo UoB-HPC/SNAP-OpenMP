@@ -299,7 +299,7 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp target teams num_teams(1) thread_limit(236) if(OFFLOAD)
+#pragma omp target teams if(OFFLOAD)
     for(unsigned int o = 0; o < 8; ++o)
     {
 #pragma omp distribute parallel for

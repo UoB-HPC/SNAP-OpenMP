@@ -142,8 +142,11 @@ void calc_outer_source(void)
                         {
                             for (int m = 0; m < lma(l); m++)
                             {
-                                g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
-                                mom++;
+                                if(mom < cmom)
+                                {
+                                    g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
+                                    mom++;
+                                }
                             }
                         }
                     }
@@ -161,7 +164,7 @@ void calc_inner_source(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD)
-#pragma omp parallel for collapse(4)
+#pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
         for(int k = 0; k < nz; ++k)
@@ -334,6 +337,13 @@ void initialise_device_memory(void)
     for(int ii = 0; ii < g2g_source_len; ++ii)
     {
         g2g_source[ii] = 0.0;
+    }
+
+#pragma omp target if(OFFLOAD)
+#pragma omp parallel for
+    for(int ii = 0; ii < source_len; ++ii)
+    {
+        source[ii] = 0.0;
     }
 }   
 
