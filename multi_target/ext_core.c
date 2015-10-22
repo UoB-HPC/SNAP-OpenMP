@@ -11,24 +11,36 @@
 #include "ext_profiler.h"
 
 void ext_solve_(
-		double *mu_in, 
-		double *eta_in, 
-		double *xi_in,
-		double *scat_coeff_in,
-		double *weights_in,
-		double *velocity_in,
-		double *xs_in,
-		int *mat_in,
-		double *fixed_source_in,
-		double *gg_cs_in,
-		int *lma_in)
+        double *mu_in, 
+        double *eta_in, 
+        double *xi_in,
+        double *scat_coeff_in,
+        double *weights_in,
+        double *velocity_in,
+        double *xs_in,
+        int *mat_in,
+        double *fixed_source_in,
+        double *gg_cs_in,
+        int *lma_in)
 {
     initialise_host_memory(mu_in, eta_in, xi_in, scat_coeff_in, weights_in, velocity_in,
             xs_in, mat_in, fixed_source_in, gg_cs_in, lma_in);
 
-#pragma omp target update if(OFFLOAD) to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
-        nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
-        epsi, tolr, dd_i, global_timestep)
+    double mem_capacity =
+        mu_len + eta_len + xi_len + scat_coeff_len + weights_len + velocity_len +
+        xs_len + mat_len + fixed_source_len + gg_cs_len + lma_len + flux_i_len +
+        flux_j_len + flux_k_len + dd_j_len + dd_k_len + total_cross_section_len +
+        scat_cs_len + denom_len + source_len + time_delta_len + groups_todo_len +
+        g2g_source_len + scalar_flux_len*4 + scalar_mom_len + flux_in_len +
+        flux_out_len; 
+
+    printf("This problem requires more than %.3fGB of memory capacity.\n",
+            (mem_capacity * sizeof(double)) / (1024*1024*1024));
+
+#pragma omp target update if(OFFLOAD) device(MIC_DEVICE) \
+    to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
+            nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
+            epsi, tolr, dd_i, global_timestep)
 #pragma omp target data if(OFFLOAD) device(MIC_DEVICE) \
     map(to: mu[:mu_len], eta[:eta_len], xi[:xi_len], scat_coeff[:scat_coeff_len], \
             weights[:weights_len], velocity[:velocity_len], xs[:xs_len], mat[:mat_len], \
@@ -39,8 +51,8 @@ void ext_solve_(
             time_delta[:time_delta_len], groups_todo[:groups_todo_len], g2g_source[:g2g_source_len], \
             old_outer_scalar[:scalar_flux_len], new_scalar[:scalar_flux_len], \
             old_inner_scalar[:scalar_flux_len])\
-    map(tofrom: scalar_flux[:nx*ny*nz*ng], flux_in[:nang*nx*ny*nz*ng*noct],\
-            flux_out[:nang*nx*ny*nz*ng*noct], scalar_mom[:(cmom-1)*nx*ny*nz*ng])
+    map(from: scalar_flux[:scalar_flux_len], flux_in[:flux_in_len],\
+            flux_out[:flux_out_len], scalar_mom[:scalar_mom_len])
     {
         initialise_device_memory();
         iterate();
@@ -187,7 +199,7 @@ void iterate(void)
             // Reset the inner convergence list
             bool inner_done = false;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
             for (unsigned int g = 0; g < ng; g++)
             {
                 groups_todo[g] = g;
@@ -218,6 +230,8 @@ void iterate(void)
 
                 // Save flux
                 store_scalar_flux(old_inner_scalar);
+
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
                 zero_edge_flux_buffers();
 
 #ifdef TIMING
@@ -246,7 +260,8 @@ void iterate(void)
                 double t4 = omp_get_wtime();
 #endif
 
-                inner_done = check_convergence(old_inner_scalar, new_scalar, epsi, groups_todo, &num_groups_todo, true);
+                inner_done = check_convergence(old_inner_scalar, new_scalar, 
+                        epsi, groups_todo, &num_groups_todo, true);
 
 #ifdef TIMING
                 double t5 = omp_get_wtime();
@@ -259,7 +274,8 @@ void iterate(void)
             }
 
             // Check convergence
-            outer_done = check_convergence(old_outer_scalar, new_scalar, 100.0*epsi, groups_todo, &num_groups_todo, false);
+            outer_done = check_convergence(old_outer_scalar, new_scalar, 
+                    100.0*epsi, groups_todo, &num_groups_todo, false);
 
             if (outer_done && inner_done)
             {
@@ -299,7 +315,7 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp target teams if(OFFLOAD)
+#pragma omp target teams if(OFFLOAD) device(MIC_DEVICE)
     for(unsigned int o = 0; o < 8; ++o)
     {
 #pragma omp distribute parallel for

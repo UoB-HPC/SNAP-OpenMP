@@ -4,7 +4,7 @@
 
 # User defined parameters
 DBG 	 = no
-MIC_MODE = offload
+MIC_MODE = native
 PROFILER = yes
 COPTION  = -qopt-report=5 -qopt-report-phase=vec
 FOPTION  = 

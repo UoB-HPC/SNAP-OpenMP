@@ -3,7 +3,11 @@
 #include <stdbool.h>
 
 void initialise_device_memory(void);
+
+#pragma omp declare target
 void zero_edge_flux_buffers(void);
+#pragma omp end declare target
+
 void zero_flux_moments_buffer(void);
 void zero_flux_in_out(void);
 void zero_scalar_flux(void);

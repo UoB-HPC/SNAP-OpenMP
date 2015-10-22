@@ -1,14 +1,5 @@
 #pragma once 
 
-#ifndef OFFLOAD
-    #define OFFLOAD 0
-#endif
-#ifndef MIC_DEVICE
-    #define MIC_DEVICE 0
-#endif
-
-#define VEC_ALIGN 64
-
 // Entry point for completing the solve
 void ext_solve_(
 		double *mu, 

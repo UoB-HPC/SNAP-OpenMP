@@ -7,15 +7,17 @@
 #include "ext_profiler.h"
 
 // Compute the order of the sweep for the first octant
-plane *compute_sweep_order(void)
+void compute_sweep_order(int** num_cells, cell** cells)
 {
-    START_PROFILING;
-
     unsigned int nplanes = ichunk + ny + nz - 2;
-    plane *planes = (plane *)malloc(sizeof(plane)*nplanes);
-    for (unsigned int i = 0; i < nplanes; i++)
+    *num_cells = (int*)_mm_malloc(nplanes*sizeof(int), 64);
+    *cells = (cell*)_mm_malloc(nz*ny*ichunk*sizeof(cell), 64);
+    int* tmp_indices = (int*)_mm_malloc(nplanes*sizeof(int), 64);
+
+    for(int ii = 0; ii < nplanes; ++ii)
     {
-        planes[i].num_cells = 0;
+        (*num_cells)[ii] = 0;
+        tmp_indices[ii] = 0;
     }
 
     // Cells on each plane have equal co-ordinate sum
@@ -26,16 +28,9 @@ plane *compute_sweep_order(void)
             for (unsigned int i = 0; i < ichunk; i++)
             {
                 unsigned int n = i + j + k;
-                planes[n].num_cells++;
+                (*num_cells)[n]++;
             }
         }
-    }
-
-    // Allocate the memory for each plane
-    for (unsigned int i = 0; i < nplanes; i++)
-    {
-        planes[i].cells = (struct cell *)malloc(sizeof(struct cell)*planes[i].num_cells);
-        planes[i].index = 0;
     }
 
     // Store the cell indexes in the plane array
@@ -46,27 +41,33 @@ plane *compute_sweep_order(void)
             for (unsigned int i = 0; i < ichunk; i++)
             {
                 unsigned int n = i + j + k;
-                unsigned int idx = planes[n].index;
-                planes[n].cells[idx].i = i;
-                planes[n].cells[idx].j = j;
-                planes[n].cells[idx].k = k;
-                planes[n].index += 1;
+
+                unsigned int offset = 0;
+                for(int l = 0; l < n; ++l)
+                {
+                    offset += (*num_cells)[l];
+                }
+
+                unsigned int ind = tmp_indices[n];
+                (*cells)[offset + ind].i = i;
+                (*cells)[offset + ind].j = j;
+                (*cells)[offset + ind].k = k;
+                tmp_indices[n]++;
             }
         }
     }
 
-    STOP_PROFILING(__func__, true);
-
-    return planes;
+    _mm_free(tmp_indices);
 }
 
 // Sweep over the grid and compute the angular flux
 void sweep_octant(
-		const unsigned int timestep, 
-		const unsigned int oct, 
-		const unsigned int ndiag, 
-		const plane *planes, 
-		const unsigned int num_groups_todo)
+        const unsigned int timestep, 
+        const unsigned int oct, 
+        const unsigned int ndiag, 
+        const cell* cells,
+        const int* num_cells,
+        const unsigned int num_groups_todo)
 {
     // Determine the cell step parameters for the given octant
     // Create the list of octant co-ordinates in order
@@ -92,59 +93,62 @@ void sweep_octant(
     int kstep = (zhi == nz) ? -1 : 1;
 
     size_t offset = oct*nang*nx*ny*nz*ng;
-	double* l_flux_in = (timestep % 2 == 0 ? flux_in : flux_out) + offset;
-	double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in) + offset;
+    double* l_flux_in = (timestep % 2 == 0 ? flux_in : flux_out) + offset;
+    double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in) + offset;
 
-	for (unsigned int d = 0; d < ndiag; d++)
-	{
-		sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
-			   	planes[d].cells, groups_todo, num_groups_todo, planes[d].num_cells);
-	}
+    int cells_processed = 0;
+    for (unsigned int d = 0; d < ndiag; d++)
+    {
+        int ncells = num_cells[d];
+        sweep_cell(istep, jstep, kstep, oct, l_flux_in, l_flux_out,
+                &(cells[cells_processed]), groups_todo, num_groups_todo, ncells);
+        cells_processed += ncells;
+    }
 }
 
 // Perform a sweep over the grid for all the octants
 void perform_sweep(
-		unsigned int num_groups_todo)
+        unsigned int num_groups_todo)
 {
-	// Number of planes in this octant
-	unsigned int ndiag = ichunk + ny + nz - 2;
+    // Number of planes in this octant
+    unsigned int ndiag = ichunk + ny + nz - 2;
 
-	// Get the order of cells to enqueue
-	plane *planes = compute_sweep_order();
+    START_PROFILING;
 
-	for (int o = 0; o < noct; o++)
-	{
-		sweep_octant(global_timestep, o, ndiag, planes, num_groups_todo);
-		zero_edge_flux_buffers();
-	}
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+    {
+        // Get the order of cells to enqueue
+        cell* cells;
+        int* num_cells;
+        compute_sweep_order(&num_cells, &cells);
 
-	// Free planes
-	for (unsigned int i = 0; i < ndiag; i++)
-	{
-		free(planes[i].cells);
-	}
+        for (int o = 0; o < noct; o++)
+        {
+            sweep_octant(global_timestep, o, ndiag, cells, num_cells, num_groups_todo);
+            zero_edge_flux_buffers();
+        }
 
-	free(planes);
+        _mm_free(cells);
+        _mm_free(num_cells);
+    }
+
+    STOP_PROFILING(__func__, true);
 }
 
 // Solve the transport equations for a single angle in a single cell for a single group
 void sweep_cell(
-		const int istep,
-		const int jstep,
-		const int kstep,
-		const unsigned int oct,
-		const double* restrict l_flux_in,
-		double* restrict l_flux_out,
-		const struct cell * restrict cell_index,
-		const unsigned int * restrict groups_todo,
-		const unsigned int num_groups_todo,
-		const unsigned int num_cells)
+        const int istep,
+        const int jstep,
+        const int kstep,
+        const unsigned int oct,
+        const double* restrict l_flux_in,
+        double* restrict l_flux_out,
+        const cell* restrict cell_index,
+        const unsigned int * restrict groups_todo,
+        const unsigned int num_groups_todo,
+        const unsigned int num_cells)
 {
-    START_PROFILING;
-
-#pragma omp target teams if(OFFLOAD)\
-    map(to: cell_index[:num_cells]) 
-#pragma omp distribute parallel for collapse(2)
+#pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
@@ -266,6 +270,4 @@ void sweep_cell(
             }
         }
     }
-
-    STOP_PROFILING(__func__, true);
 }

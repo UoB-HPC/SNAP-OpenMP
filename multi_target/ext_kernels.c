@@ -5,13 +5,14 @@
 #include "ext_macros.h"
 #include "ext_problem.h"
 #include "ext_profiler.h"
+#include "ext_kernels.h"
 
 // Calculate the inverted denominator for all the energy groups
 void calc_denominator(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
     {
@@ -33,7 +34,7 @@ void calc_time_delta(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
     for(int g = 0; g < ng; ++g)
     {
         time_delta(g) = 2.0 / (dt * velocity(g));
@@ -47,7 +48,7 @@ void calc_dd_coefficients(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
     {
         dd_i = 2.0 / dx;
 
@@ -66,7 +67,7 @@ void calc_total_cross_section(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int k = 0; k < nz; ++k)
     {
@@ -89,7 +90,7 @@ void calc_scattering_cross_section(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(unsigned int g = 0; g < ng; ++g)
     {
@@ -116,7 +117,7 @@ void calc_outer_source(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for collapse(4)
     for (unsigned int g1 = 0; g1 < ng; g1++)
     {
@@ -163,7 +164,7 @@ void calc_inner_source(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
@@ -194,14 +195,14 @@ void calc_inner_source(void)
 
 void zero_flux_in_out(void)
 {
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int i = 0; i < flux_in_len; ++i)
     {
         flux_in[i] = 0.0;
     }
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int i = 0; i < flux_out_len; ++i)
     {
@@ -218,8 +219,7 @@ void zero_edge_flux_buffers(void)
 #define MAX(A,B) (((A) > (B)) ? (A) : (B))
     int max_length = MAX(MAX(fi_len, fj_len), fk_len);
 
-#pragma omp target if(OFFLOAD)
-#pragma omp parallel for schedule(static, 5000)
+#pragma omp parallel for
     for(int i = 0; i < max_length; ++i)
     {
         if(i < fi_len) flux_i[i] = 0.0;
@@ -230,7 +230,7 @@ void zero_edge_flux_buffers(void)
 
 void zero_flux_moments_buffer(void)
 {
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
     {
@@ -240,7 +240,7 @@ void zero_flux_moments_buffer(void)
 
 void zero_scalar_flux(void)
 {
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int i = 0; i < nx*ny*nz*ng; ++i)
     {
@@ -266,7 +266,7 @@ bool check_convergence(
         *num_groups_todo = 0;
     }
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
@@ -328,22 +328,24 @@ bool check_convergence(
 void initialise_device_memory(void)
 {
     zero_scalar_flux();
-    zero_edge_flux_buffers();
     zero_flux_moments_buffer();
     zero_flux_in_out();
 
-#pragma omp target if(OFFLOAD)
-#pragma omp parallel for
-    for(int ii = 0; ii < g2g_source_len; ++ii)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
     {
-        g2g_source[ii] = 0.0;
-    }
+        zero_edge_flux_buffers();
 
-#pragma omp target if(OFFLOAD)
 #pragma omp parallel for
-    for(int ii = 0; ii < source_len; ++ii)
-    {
-        source[ii] = 0.0;
+        for(int ii = 0; ii < g2g_source_len; ++ii)
+        {
+            g2g_source[ii] = 0.0;
+        }
+
+#pragma omp parallel for
+        for(int ii = 0; ii < source_len; ++ii)
+        {
+            source[ii] = 0.0;
+        }
     }
 }   
 
@@ -352,7 +354,7 @@ void store_scalar_flux(double* to)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for(int i = 0; i < nx*ny*nz*ng; ++i)
     {
