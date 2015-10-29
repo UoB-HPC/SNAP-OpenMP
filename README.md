@@ -5,11 +5,16 @@ This is an in development port of the SNAP application using OpenMP 4.0.
 
 There are a number of flags at the top of the Makefile:
 
-* DBG = < yes | no > - turns on debugging flags
-* MIC_MODE = < offload | native | none > - switches between OpenMP 4.0 offloading, OpenMP native compilation and standard OpenMP
-* PROFILER = < yes | no > - turns on a function-level profiler for the C functions
-* CC = < mpic++ | mpiicpc | ... > - C++ mpi wrapper
-* FORTRAN = < mpif90 | mpiifort | ... > - C++ mpi wrapper
+* DBG = < yes | no > 
+    - turns on debugging flags
+* MIC_MODE = < offload | native | none > 
+    - switches between OpenMP 4.0 offloading, OpenMP native compilation and standard OpenMP
+* PROFILER = < yes | no > 
+    - turns on a function-level profiler for the C functions
+* CC = < mpicc | mpiicc | ... > 
+    - C mpi wrapper
+* FORTRAN = < mpif90 | mpiifort | ... > 
+    - F90 mpi wrapper
 
 The MIC_DEVICE flag is defaulted in ext_macros.h to 0.
 
