@@ -1,9 +1,7 @@
 SNAP: SN (Discrete Ordinates) Application Proxy
 ===============================================
 
-This is an in development port of the SNAP application using OpenMP 4.0.
-
-There are a number of flags at the top of the Makefile:
+This is an in development port of the SNAP application using OpenMP 4.0. There are a number of options you can pass in or change at the top of the Makefile:
 
 * DBG = < yes | no > 
     - turns on debugging flags
@@ -16,7 +14,19 @@ There are a number of flags at the top of the Makefile:
 * FORTRAN = < mpif90 | mpiifort | ... > 
     - F90 mpi wrapper
 
-The MIC_DEVICE flag is defaulted in ext_macros.h to 0.
+The MIC_DEVICE flag is defaulted in ext_macros.h to 0, but there is currently no MPI functionality built into the C application.
+
+To build the file simply type 'make' and pass in any flags that need updating.
+
+To run the application you need to use a command such as:
+
+'mpirun -n 1 ./snap snap.in snap.out'
+
+The 'snap.in' file contains all of the configuration options for the SNAP application. It is set in this version with default values matching those used for testing in our current SNAP publication:
+
+Deakin, T, McIntosh-Smith, S & Gaudin, W 2015, ‘Expressing Parallelism on Many-Core for Deterministic Discrete Ordinates Transport’. in: 2015 IEEE International Conference on Cluster Computing: Workshop on Representative Applications.
+
+The following information is from the original SNAP application and may not match the C application exactly:
 
 Description
 -----------
@@ -34,38 +44,7 @@ Compilation
 
 SNAP has been written to the Fortran 90/95 standard. It has been successfully built with, but not necessarily limited to, gfortran and ifort. Moreover, the code has been built with the profiling tool [Byfl](https://github.com/losalamos/byfl). The accompanying Makefile retains some of the old make options for different build types. However, the current build system depends on the availability of MPI and OpenMP libraries. Builds without these libraries will require modification to the source code to remove related subroutine calls and directives.
 
-MPI implementations typically suggest using a "wrapper" compiler to compile the code. SNAP has been built and tested with OpenMPI. OpenMPI allows one to set the underlying Fortran compiler with the environment variable OMPI_FC, where the variable is set to the (path and) compiler of choice, e.g., ifort, gfortran, etc.
-
-The makefile currently uses:
-
-    FORTRAN = mpif90
-
-and all testing has been performed with
-
-    OMPI_FC = [path]/ifort
-
-Fortran compilation flags can be set according to the underlying compiler. The current flags are set for the ifort compiler and using OpenMP for parallel threading.
-
-    TARGET = snap
-    FFLAGS = -03 -openmp
-    FFLAG2 =
-
-where `FFLAG2` is reserved for additional flags that may need applied differently, depending on the compiler. To make SNAP with these default settings, simply type
-
-    make
-
-on the command line within the SNAP directory.
-
-A debugging version of SNAP can be built by typing
-
-    make OPT=no
-
-on the command line. The unoptimized, debugging version of SNAP features bounds checking, back-tracing an error, and the necessary debug compiler flags. With ifort, these flags appear as:
-
-    FFLAGS = -g -O0 -check bounds -traceback -openmp
-    FFLAG2 =
-
-The values for these compilation variables have been modified for various Fortran compilers and the Makefile provides details of what has been used previously. These lines are commented out for clarity at this time and to ensure that changes to the build system are made carefully before attempting to rebuild with a different compiler.
+MPI implementations typically suggest using a "wrapper" compiler to compile the code. SNAP has been built and tested with OpenMPI.
 
 The SNAP directory can be cleaned up of its module and object files if the user desires with:
 
