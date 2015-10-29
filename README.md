@@ -20,7 +20,7 @@ To build the file simply type 'make' and pass in any flags that need updating.
 
 To run the application you need to use a command such as:
 
-'mpirun -n 1 ./snap snap.in snap.out'
+    mpirun -n 1 ./snap snap.in snap.out
 
 The 'snap.in' file contains all of the configuration options for the SNAP application. It is set in this version with default values matching those used for testing in our current SNAP publication:
 
