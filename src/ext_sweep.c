@@ -10,9 +10,9 @@
 void compute_sweep_order(int** num_cells, cell** cells)
 {
     unsigned int nplanes = ichunk + ny + nz - 2;
-    *num_cells = (int*)_mm_malloc(nplanes*sizeof(int), 64);
-    *cells = (cell*)_mm_malloc(nz*ny*ichunk*sizeof(cell), 64);
-    int* tmp_indices = (int*)_mm_malloc(nplanes*sizeof(int), 64);
+    *num_cells = (int*)_mm_malloc(nplanes*sizeof(int), VEC_ALIGN);
+    *cells = (cell*)_mm_malloc(nz*ny*ichunk*sizeof(cell), VEC_ALIGN);
+    int* tmp_indices = (int*)_mm_malloc(nplanes*sizeof(int), VEC_ALIGN);
 
     for(int ii = 0; ii < nplanes; ++ii)
     {
@@ -115,22 +115,19 @@ void perform_sweep(
 
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+    // Get the order of cells to enqueue
+    cell* cells;
+    int* num_cells;
+    compute_sweep_order(&num_cells, &cells);
+
+    for (int o = 0; o < noct; o++)
     {
-        // Get the order of cells to enqueue
-        cell* cells;
-        int* num_cells;
-        compute_sweep_order(&num_cells, &cells);
-
-        for (int o = 0; o < noct; o++)
-        {
-            sweep_octant(global_timestep, o, ndiag, cells, num_cells, num_groups_todo);
-            zero_edge_flux_buffers();
-        }
-
-        _mm_free(cells);
-        _mm_free(num_cells);
+        sweep_octant(global_timestep, o, ndiag, cells, num_cells, num_groups_todo);
+        zero_edge_flux_buffers();
     }
+
+    _mm_free(cells);
+    _mm_free(num_cells);
 
     STOP_PROFILING(__func__, true);
 }
@@ -148,12 +145,14 @@ void sweep_cell(
         const unsigned int num_groups_todo,
         const unsigned int num_cells)
 {
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
+    map(to: cell_index[:num_cells])
 #pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
-#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:64)    
+#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:VEC_ALIGN)    
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group

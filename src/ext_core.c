@@ -26,17 +26,6 @@ void ext_solve_(
     initialise_host_memory(mu_in, eta_in, xi_in, scat_coeff_in, weights_in, velocity_in,
             xs_in, mat_in, fixed_source_in, gg_cs_in, lma_in);
 
-    double mem_capacity =
-        mu_len + eta_len + xi_len + scat_coeff_len + weights_len + velocity_len +
-        xs_len + mat_len + fixed_source_len + gg_cs_len + lma_len + flux_i_len +
-        flux_j_len + flux_k_len + dd_j_len + dd_k_len + total_cross_section_len +
-        scat_cs_len + denom_len + source_len + time_delta_len + groups_todo_len +
-        g2g_source_len + scalar_flux_len*4 + scalar_mom_len + flux_in_len +
-        flux_out_len; 
-
-    printf("This problem requires more than %.3fGB of memory capacity.\n",
-            (mem_capacity * sizeof(double)) / (1024*1024*1024));
-
 #pragma omp target update if(OFFLOAD) device(MIC_DEVICE) \
     to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
             nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
@@ -231,7 +220,6 @@ void iterate(void)
                 // Save flux
                 store_scalar_flux(old_inner_scalar);
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
                 zero_edge_flux_buffers();
 
 #ifdef TIMING
@@ -321,7 +309,7 @@ void reduce_angular(void)
 #pragma omp distribute parallel for
         for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
         {
-#pragma omp simd lastprivate(ind,o) aligned(weights:64)
+#pragma omp simd lastprivate(ind,o) aligned(weights: VEC_ALIGN)
             for (unsigned int g = 0; g < ng; g++)
             {
                 const bool tg = time_delta(g) != 0.0;

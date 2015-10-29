@@ -1,6 +1,5 @@
 #pragma once
 
-#pragma omp declare target
 
 typedef struct
 {
@@ -28,8 +27,6 @@ void sweep_cell(
         const unsigned int num_cells);
 
 void compute_sweep_order(int** num_cells, cell** cells);
-
-#pragma omp end declare target
 
 void perform_sweep(
         unsigned int num_groups_todo);

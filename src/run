@@ -1,0 +1,2 @@
+make
+mpirun -n 1 ./snap snap.in snap.out
