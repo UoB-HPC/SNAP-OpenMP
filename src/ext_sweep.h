@@ -1,6 +1,5 @@
 #pragma once
 
-
 typedef struct
 {
     unsigned int i,j,k;
