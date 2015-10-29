@@ -63,7 +63,7 @@ SRCS = global.f90 snap_main.f90 utils.f90 version.f90 plib.f90 geom.f90 \
        octsweep.f90 dim1_sweep.f90 dim3_sweep.f90 output.f90 time.f90 mms.f90
 
 $(TARGET) :	$(OBJS)
-		$(FORTRAN) $(FFLAGS) $(FFLAG2) -o $@ $(OBJS) $(OPENCL)
+		$(FORTRAN) $(FFLAGS) $(FFLAG2) -o $@ $(OBJS) 
 
 snap_main.o :	global.o utils.o version.o input.o setup.o output.o time.o \
 		dealloc.o plib.o control.o
@@ -106,7 +106,7 @@ mms.o:	global.o geom.o sn.o data.o control.o plib.o
 # C rule
 #
 %.o:	%.c ext_sweep.h
-	$(CC) $(CFLAGS) -c $< $(OPENCL) $(CFLAGS2)
+	$(CC) $(CFLAGS) -c $< $(CFLAGS2)
 
 ext_init.o:	ext_kernels.h
 
