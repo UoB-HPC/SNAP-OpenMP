@@ -4,14 +4,14 @@
 
 # User defined parameters
 DBG 	 = no
-MIC_MODE = native
+MIC_MODE = offload
 PROFILER = yes
 COPTION  = -qopt-report=5 -qopt-report-phase=vec
 FOPTION  = 
 OPENMP 	 = -qopenmp
 TARGET 	 = snap
-CC 		 = mpiicc
-FORTRAN  = mpiifort
+CC 		 = mpicc
+FORTRAN  = mpif90
 
 # Enables native or offload compilation
 ifeq ($(MIC_MODE), native)
