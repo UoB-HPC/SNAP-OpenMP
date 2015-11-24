@@ -57,8 +57,11 @@ double* g2g_source;
 double* scalar_mom;
 double* scat_cs;
 unsigned int* groups_todo;
-
-// Global variable for the timestep
+double* old_outer_scalar;
+double* old_inner_scalar;
+double* new_scalar;
+     
+        // Global variable for the timestep
 unsigned int global_timestep;
 
 #pragma omp end declare target

@@ -1,14 +1,5 @@
 #pragma once 
 
-#ifndef OFFLOAD
-    #define OFFLOAD 0
-#endif
-#ifndef MIC_DEVICE
-    #define MIC_DEVICE 0
-#endif
-
-#define VEC_ALIGN 64
-
 // Entry point for completing the solve
 void ext_solve_(
 		double *mu, 
@@ -23,6 +14,8 @@ void ext_solve_(
 		double *gg_cs,
 		int *lma);
 
+#pragma omp declare target
+
 // Entry point for initialising problem params
 void initialise_parameters(
     int *nx_, int *ny_, int *nz_,
@@ -35,13 +28,8 @@ void initialise_parameters(
     int *timesteps_, int *outers_, int *inners_,
     double *epsi_, double *tolr_);
 
-#pragma omp declare target
-
-// Allocates buffers on the host
-void initialise_host_memory(void);
-
 // Allocates buffers on the device
-void initialise_device_memory(
+void initialise_host_memory(
 		double *mu_in, 
 		double *eta_in, 
 		double *xi_in,

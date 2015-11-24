@@ -12,11 +12,11 @@ npez=1
 
 ndimen=3
 
-nx=16
+nx=8
 lx=4.8
-ny=16
+ny=8
 ly=4.8
-nz=16
+nz=8
 lz=4.8
 
 ichunk=16
@@ -33,8 +33,8 @@ it_det=0
 tf=1.00
 nsteps=1
 
-iitm=1
-oitm=1
+iitm=20
+oitm=20
 
 epsi=1.0E-5
 

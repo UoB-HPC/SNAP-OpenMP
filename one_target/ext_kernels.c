@@ -5,6 +5,7 @@
 #include "ext_macros.h"
 #include "ext_problem.h"
 #include "ext_profiler.h"
+#include "ext_kernels.h"
 
 // Calculate the inverted denominator for all the energy groups
 void calc_denominator(void)
@@ -45,12 +46,12 @@ void calc_dd_coefficients(void)
 {
     START_PROFILING;
 
-    dd_i = 2.0 / dx;
+        dd_i = 2.0 / dx;
 
-    for(int a = 0; a < nang; ++a)
-    {
-        dd_j(a) = (2.0/dy)*eta(a);
-        dd_k(a) = (2.0/dz)*xi(a);
+        for(int a = 0; a < nang; ++a)
+        {
+            dd_j(a) = (2.0/dy)*eta(a);
+            dd_k(a) = (2.0/dz)*xi(a);
     }
 
     STOP_PROFILING(__func__, true);
@@ -127,14 +128,16 @@ void calc_outer_source(void)
                             continue;
                         }
 
-                        g2g_source(0,i,j,k,g1) += gg_cs(mat(i,j,k)-1,0,g2,g1) * scalar_flux(g2,i,j,k);
+                        g2g_source(0,i,j,k,g1) += gg_cs(mat(i,j,k)-1,0,g2,g1) 
+                            * scalar_flux(g2,i,j,k);
 
                         unsigned int mom = 1;
                         for (unsigned int l = 1; l < nmom; l++)
                         {
                             for (int m = 0; m < lma(l); m++)
                             {
-                                g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
+                                g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) 
+                                    * scalar_mom(g2,mom-1,i,j,k);
                                 mom++;
                             }
                         }
@@ -161,14 +164,16 @@ void calc_inner_source(void)
             {
                 for(int i = 0; i < nx; ++i)
                 {
-                    source(0,i,j,k,g) = g2g_source(0,i,j,k,g) + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
+                    source(0,i,j,k,g) = g2g_source(0,i,j,k,g) 
+                        + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
 
                     unsigned int mom = 1;
                     for (unsigned int l = 1; l < nmom; l++)
                     {
                         for (int m = 0; m < lma(l); m++)
                         {
-                            source(mom,i,j,k,g) = g2g_source(mom,i,j,k,g) + scat_cs(l,i,j,k,g) * scalar_mom(g,mom-1,i,j,k);
+                            source(mom,i,j,k,g) = g2g_source(mom,i,j,k,g) 
+                                + scat_cs(l,i,j,k,g) * scalar_mom(g,mom-1,i,j,k);
                             mom++;
                         }
                     }
@@ -183,13 +188,13 @@ void calc_inner_source(void)
 void zero_flux_in_out(void)
 {
 #pragma omp parallel for
-    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
+    for(int i = 0; i < flux_in_len; ++i)
     {
         flux_in[i] = 0.0;
     }
 
 #pragma omp parallel for
-    for(int i = 0; i < nang*nx*ny*nz*ng*noct; ++i)
+    for(int i = 0; i < flux_out_len; ++i)
     {
         flux_out[i] = 0.0;
     }
@@ -204,7 +209,7 @@ void zero_edge_flux_buffers(void)
 #define MAX(A,B) (((A) > (B)) ? (A) : (B))
     int max_length = MAX(MAX(fi_len, fj_len), fk_len);
 
-#pragma omp parallel for schedule(static, 5000)
+#pragma omp parallel for
     for(int i = 0; i < max_length; ++i)
     {
         if(i < fi_len) flux_i[i] = 0.0;
@@ -216,7 +221,7 @@ void zero_edge_flux_buffers(void)
 void zero_flux_moments_buffer(void)
 {
 #pragma omp parallel for
-    for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_mom_len; ++i)
     {
         scalar_mom[i] = 0.0;
     }
@@ -225,7 +230,7 @@ void zero_flux_moments_buffer(void)
 void zero_scalar_flux(void)
 {
 #pragma omp parallel for
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         scalar_flux[i] = 0.0;
     }
@@ -243,69 +248,62 @@ bool check_convergence(
 
     bool r = true;
 
-    // Reset the do_group list
-    if (inner)
-    {
-        *num_groups_todo = 0;
-    }
+    int ngt = 0;
 
 #pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
-        bool gr = false;
-        for (unsigned int k = 0; k < nz; k++)
+        for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
         {
-            if (gr) break;
-            for (unsigned int j = 0; j < ny; j++)
+            double val = (fabs(old[g+(ng*ind)] > tolr))
+                ? fabs(new[g+(ng*ind)]/old[g+(ng*ind)] - 1.0)
+                : fabs(new[g+(ng*ind)] - old[g+(ng*ind)]);
+
+            if (val > epsi)
             {
-                if (gr) break;
-                for (unsigned int i = 0; i < nx; i++)
+                r = false;
+
+                if (inner)
                 {
-                    double val;
-                    if (fabs(old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] > tolr))
+                    #pragma omp critical
                     {
-                        val = fabs(new[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)]/old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] - 1.0);
-                    }
-                    else
-                    {
-                        val = fabs(new[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] - old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)]);
-                    }
-
-                    if (val > epsi)
-                    {
-                        if (inner)
-                        {
-                            gr = true;
-                        }
-
-                        r = false;
-                        break;
+                        // Add g to the list of groups to do if we need to do it
+                        groups_todo[ngt] = g;
+                        ngt++;
                     }
                 }
+
+                break;
             }
         }
-
-        // Add g to the list of groups to do if we need to do it
-        if (inner && gr)
-        {
-            groups_todo[*num_groups_todo] = g;
-            *num_groups_todo += 1;
-        }
     }
 
-    // Check all inner groups are done in outer convergence test
-    if (!inner)
-    {
-        if (*num_groups_todo != 0)
-        {
-            r = false;
-        }
-    }
+    *num_groups_todo = ngt;
 
     STOP_PROFILING(__func__, true);
 
     return r;
 }
+
+void initialise_device_memory(void)
+{
+    zero_scalar_flux();
+    zero_flux_moments_buffer();
+    zero_flux_in_out();
+    zero_edge_flux_buffers();
+
+#pragma omp parallel for
+    for(int ii = 0; ii < g2g_source_len; ++ii)
+    {
+        g2g_source[ii] = 0.0;
+    }
+
+#pragma omp parallel for
+    for(int ii = 0; ii < source_len; ++ii)
+    {
+        source[ii] = 0.0;
+    }
+}   
 
 // Copies the value of scalar flux
 void store_scalar_flux(double* to)
@@ -313,7 +311,7 @@ void store_scalar_flux(double* to)
     START_PROFILING;
 
 #pragma omp parallel for
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         to[i] = scalar_flux[i];
     }
