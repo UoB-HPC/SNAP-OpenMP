@@ -10,8 +10,8 @@ COPTION  = #-qopt-report=5 -qopt-report-phase=vec
 FOPTION  = 
 OPENMP 	 = -qopenmp
 TARGET 	 = snap
-CC 		 = mpicc
-FORTRAN  = mpif90
+CC 		 = mpiicc
+FORTRAN  = mpiifort
 
 # Enables native or offload compilation
 ifeq ($(MIC_MODE), native)
