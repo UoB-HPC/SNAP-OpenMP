@@ -146,13 +146,13 @@ void sweep_cell(
         const unsigned int num_cells)
 {
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
-    map(to: cell_index[:num_cells])
+        map(to: cell_index[:num_cells])
 #pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
-#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:VEC_ALIGN)    
+#pragma omp simd lastprivate(nc,tg) aligned(dd_j,dd_k,mu:VEC_ALIGN)
             for(int a = 0; a < nang; ++a)
             {
                 // Get indexes for angle and group

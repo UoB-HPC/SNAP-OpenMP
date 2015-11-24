@@ -1,17 +1,17 @@
 #pragma once
 
 #ifndef OFFLOAD
-    #define OFFLOAD 0
+#define OFFLOAD 0
 #endif
 #ifndef MIC_DEVICE
-    #define MIC_DEVICE 0
+#define MIC_DEVICE 0
 #endif
 
 #define VEC_ALIGN 64
 
 /*
- *		Array access macros
- */
+ *  *       Array access macros
+ *   */
 #define l_flux_out(a,g,i,j,k) l_flux_out[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
 #define l_flux_in(a,g,i,j,k) l_flux_in[(a)+(nang*(g))+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))]
 #define source(m,i,j,k,g) source[(m)+(cmom*(i))+(cmom*nx*(j))+(cmom*nx*ny*(k))+(cmom*nx*ny*nz*(g))]
@@ -24,14 +24,14 @@
 #define mu(a) mu[(a)]
 #define eta(a) eta[(a)]
 #define xi(a) xi[(a)]
-#define scat_coeff(m,a,o) scat_coeff[(m)+(a*cmom)+(nang*cmom*(o))]
+#define scat_coeff(l,a,o) scat_coeff[l+(a*cmom)+(nang*cmom*(o))]
 #define time_delta(g) time_delta[(g)]
 #define total_cross_section(g,i,j,k) total_cross_section[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define scalar_flux(g,i,j,k) scalar_flux[(g)+(ng*(i))+(ng*nx*(j))+(ng*nx*ny*(k))]
 #define weights(a) weights[(a)]
 
-#define angular(o,ind,g,a) angular[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]
-#define angular_prev(o,ind,g,a) angular_prev[a+g*nang+nang*ng*ind+(nang*nx*ny*nz*ng*(o))]
+#define angular(o,i,j,k,g,a) angular[a+g*nang+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
+#define angular_prev(o,i,j,k,g,a) angular_prev[a+g*nang+(nang*ng*(i))+(nang*ng*nx*(j))+(nang*ng*nx*ny*(k))+(nang*nx*ny*nz*ng*(o))]
 
 #define velocity(g) velocity[(g)]
 
@@ -42,7 +42,7 @@
 #define fixed_source(i,j,k,g) fixed_source[(i)+(nx*(j))+(nx*ny*(k))+(nx*ny*nz*(g))]
 #define gg_cs(m,l,g1,g2) gg_cs[(m)+(nmat*(l))+(nmat*nmom*(g1))+(nmat*nmom*ng*(g2))]
 #define lma(m) lma[(m)]
-#define scalar_mom(g,m,i,j,k) scalar_mom[(g)+((ng)*(m))+(ng*(cmom-1)*(i))+(ng*(cmom-1)*nx*(j))+(ng*(cmom-1)*nx*ny*(k))]
+#define scalar_mom(g,l,i,j,k) scalar_mom[(g)+((ng)*(l))+(ng*(cmom-1)*(i))+(ng*(cmom-1)*nx*(j))+(ng*(cmom-1)*nx*ny*(k))]
 
 #define scat_cs(m,i,j,k,g) scat_cs[(m)+(nmom*(i))+(nmom*nx*(j))+(nmom*nx*ny*(k))+(nmom*nx*ny*nz*(g))]
 
@@ -73,4 +73,5 @@
 #define lma_len nmom
 #define xs_len nmat*ng
 #define scat_coeff_len cmom*nang*noct
+
 

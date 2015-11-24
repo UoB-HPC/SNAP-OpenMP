@@ -136,18 +136,17 @@ void calc_outer_source(void)
                             continue;
                         }
 
-                        g2g_source(0,i,j,k,g1) += gg_cs(mat(i,j,k)-1,0,g2,g1) * scalar_flux(g2,i,j,k);
+                        g2g_source(0,i,j,k,g1) += gg_cs(mat(i,j,k)-1,0,g2,g1) 
+                            * scalar_flux(g2,i,j,k);
 
                         unsigned int mom = 1;
                         for (unsigned int l = 1; l < nmom; l++)
                         {
                             for (int m = 0; m < lma(l); m++)
                             {
-                                if(mom < cmom)
-                                {
-                                    g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) * scalar_mom(g2,mom-1,i,j,k);
-                                    mom++;
-                                }
+                                g2g_source(mom,i,j,k,g1) += gg_cs(mat(i,j,k)-1,l,g2,g1) 
+                                    * scalar_mom(g2,mom-1,i,j,k);
+                                mom++;
                             }
                         }
                     }
@@ -165,7 +164,7 @@ void calc_inner_source(void)
     START_PROFILING;
 
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp parallel for collapse(4)
     for (unsigned int g = 0; g < ng; g++)
     {
         for(int k = 0; k < nz; ++k)
@@ -174,14 +173,16 @@ void calc_inner_source(void)
             {
                 for(int i = 0; i < nx; ++i)
                 {
-                    source(0,i,j,k,g) = g2g_source(0,i,j,k,g) + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
+                    source(0,i,j,k,g) = g2g_source(0,i,j,k,g) 
+                        + scat_cs(0,i,j,k,g) * scalar_flux(g,i,j,k);
 
                     unsigned int mom = 1;
                     for (unsigned int l = 1; l < nmom; l++)
                     {
                         for (int m = 0; m < lma(l); m++)
                         {
-                            source(mom,i,j,k,g) = g2g_source(mom,i,j,k,g) + scat_cs(l,i,j,k,g) * scalar_mom(g,mom-1,i,j,k);
+                            source(mom,i,j,k,g) = g2g_source(mom,i,j,k,g) 
+                                + scat_cs(l,i,j,k,g) * scalar_mom(g,mom-1,i,j,k);
                             mom++;
                         }
                     }
@@ -233,7 +234,7 @@ void zero_flux_moments_buffer(void)
 {
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
-    for(int i = 0; i < (cmom-1)*nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_mom_len; ++i)
     {
         scalar_mom[i] = 0.0;
     }
@@ -243,7 +244,7 @@ void zero_scalar_flux(void)
 {
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         scalar_flux[i] = 0.0;
     }
@@ -261,65 +262,38 @@ bool check_convergence(
 
     bool r = true;
 
-    // Reset the do_group list
-    if (inner)
-    {
-        *num_groups_todo = 0;
-    }
+    int ngt = 0;
 
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
-        bool gr = false;
-        for (unsigned int k = 0; k < nz; k++)
+        for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
         {
-            if (gr) break;
-            for (unsigned int j = 0; j < ny; j++)
+            double val = (fabs(old[g+(ng*ind)] > tolr))
+                ? fabs(new[g+(ng*ind)]/old[g+(ng*ind)] - 1.0)
+                : fabs(new[g+(ng*ind)] - old[g+(ng*ind)]);
+
+            if (val > epsi)
             {
-                if (gr) break;
-                for (unsigned int i = 0; i < nx; i++)
+                r = false;
+
+                if (inner)
                 {
-                    double val;
-                    if (fabs(old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] > tolr))
+                    #pragma omp critical
                     {
-                        val = fabs(new[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)]/old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] - 1.0);
-                    }
-                    else
-                    {
-                        val = fabs(new[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)] - old[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)]);
-                    }
-
-                    if (val > epsi)
-                    {
-                        if (inner)
-                        {
-                            gr = true;
-                        }
-
-                        r = false;
-                        break;
+                        // Add g to the list of groups to do if we need to do it
+                        groups_todo[ngt] = g;
+                        ngt++;
                     }
                 }
+
+                break;
             }
         }
-
-        // Add g to the list of groups to do if we need to do it
-        if (inner && gr)
-        {
-            groups_todo[*num_groups_todo] = g;
-            *num_groups_todo += 1;
-        }
     }
 
-    // Check all inner groups are done in outer convergence test
-    if (!inner)
-    {
-        if (*num_groups_todo != 0)
-        {
-            r = false;
-        }
-    }
+    *num_groups_todo = ngt;
 
     STOP_PROFILING(__func__, true);
 
@@ -356,7 +330,7 @@ void store_scalar_flux(double* to)
 
 #pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for
-    for(int i = 0; i < nx*ny*nz*ng; ++i)
+    for(int i = 0; i < scalar_flux_len; ++i)
     {
         to[i] = scalar_flux[i];
     }

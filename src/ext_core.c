@@ -26,6 +26,17 @@ void ext_solve_(
     initialise_host_memory(mu_in, eta_in, xi_in, scat_coeff_in, weights_in, velocity_in,
             xs_in, mat_in, fixed_source_in, gg_cs_in, lma_in);
 
+    double mem_capacity =
+        mu_len + eta_len + xi_len + scat_coeff_len + weights_len + velocity_len +
+        xs_len + mat_len + fixed_source_len + gg_cs_len + lma_len + flux_i_len +
+        flux_j_len + flux_k_len + dd_j_len + dd_k_len + total_cross_section_len +
+        scat_cs_len + denom_len + source_len + time_delta_len + groups_todo_len +
+        g2g_source_len + scalar_flux_len*4 + scalar_mom_len + flux_in_len +
+        flux_out_len; 
+
+    printf("This problem requires more than %.3fGB of memory capacity.\n",
+            (mem_capacity * sizeof(double)) / (1024*1024*1024));
+
 #pragma omp target update if(OFFLOAD) device(MIC_DEVICE) \
     to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
             nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
@@ -110,10 +121,9 @@ void initialise_host_memory(
     gg_cs = gg_cs_in;
     lma = lma_in;
     xs = xs_in;
+    scat_coeff = transpose_scat_coeff(scat_coeff_in);
 
     STOP_PROFILING(__func__, false);
-
-    scat_coeff = transpose_scat_coeff(scat_coeff_in);
 }
 
 // Initialises the problem parameters
@@ -303,41 +313,47 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp target teams if(OFFLOAD) device(MIC_DEVICE)
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
     for(unsigned int o = 0; o < 8; ++o)
     {
-#pragma omp distribute parallel for
-        for(unsigned int ind = 0; ind < nx*ny*nz; ++ind)
+#pragma omp parallel for collapse(3)
+        for(int k = 0; k < nz; ++k)
         {
-#pragma omp simd lastprivate(ind,o) aligned(weights: VEC_ALIGN)
-            for (unsigned int g = 0; g < ng; g++)
+            for(int j = 0; j < ny; ++j)
             {
-                const bool tg = time_delta(g) != 0.0;
-
-                for (unsigned int a = 0; a < nang; a++)
+                for(int i = 0; i < nx; ++i)
                 {
-                    const double weight = weights(a);
-                    const double ang = angular(o,ind,g,a);
-                    const double ang_p = angular_prev(o,ind,g,a);
-
-                    if (tg)
+#pragma omp simd lastprivate(i,j,k,o) aligned(weights:64)
+                    for (unsigned int g = 0; g < ng; g++)
                     {
-                        scalar_flux[g+ind*ng] += weight * (0.5 * (ang + ang_p));
+                        const bool tg = time_delta(g) != 0.0;
 
-                        for (unsigned int l = 0; l < (cmom-1); l++)
+                        for (unsigned int a = 0; a < nang; a++)
                         {
-                            scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
-                                scat_coeff(l+1,a,o) * weight * (0.5 * (ang + ang_p));
-                        }
-                    }
-                    else
-                    {
-                        scalar_flux[g+ind*ng] += weight * ang;
+                            const double weight = weights(a);
+                            const double ang = angular(o,i,j,k,g,a);
+                            const double ang_p = angular_prev(o,i,j,k,g,a);
 
-                        for (unsigned int l = 0; l < (cmom-1); l++)
-                        {
-                            scalar_mom[l+g*(cmom-1)+(ng*(cmom-1)*ind)] += 
-                                scat_coeff(l+1,a,o) * weight * ang;
+                            if (tg)
+                            {
+                                scalar_flux(g,i,j,k) += weight * (0.5 * (ang + ang_p));
+
+                                for (unsigned int l = 0; l < (cmom-1); l++)
+                                {
+                                    scalar_mom(g,l,i,j,k) += scat_coeff(l+1,a,o) 
+                                        * weight * (0.5 * (ang + ang_p));
+                                }
+                            }
+                            else
+                            {
+                                scalar_flux(g,i,j,k) += weight * ang;
+
+                                for (unsigned int l = 0; l < (cmom-1); l++)
+                                {
+                                    scalar_mom(g,l,i,j,k) += 
+                                        scat_coeff(l+1,a,o) * weight * ang;
+                                }
+                            }
                         }
                     }
                 }
@@ -350,7 +366,7 @@ void reduce_angular(void)
 
 
 // Copy the scalar flux value back to the host and transpose
-void ext_get_transpose_scalar_flux_(double *scalar)
+void ext_get_transpose_scalar_flux_(double* out_scalar)
 {
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
@@ -361,7 +377,7 @@ void ext_get_transpose_scalar_flux_(double *scalar)
             {
                 for (unsigned int i = 0; i < nx; i++)
                 {
-                    scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] 
+                    out_scalar[i+(nx*j)+(nx*ny*k)+(nx*ny*nz*g)] 
                         = scalar_flux[g+(ng*i)+(ng*nx*j)+(ng*nx*ny*k)];
                 }
             }
@@ -369,21 +385,21 @@ void ext_get_transpose_scalar_flux_(double *scalar)
     }
 }
 
-void ext_get_transpose_scalar_moments_(double *scalar_moments)
+void ext_get_transpose_scalar_moments_(double* out_scalar_moments)
 {
     // Transpose the data into the original SNAP format
     for (unsigned int g = 0; g < ng; g++)
     {
         for (unsigned int l = 0; l < cmom-1; l++)
         {
-            for (unsigned int k = 0; k < nz; k++)
+            for (unsigned int i = 0; i < nx; i++)
             {
                 for (unsigned int j = 0; j < ny; j++)
                 {
-                    for (unsigned int i = 0; i < nx; i++)
+                    for (unsigned int k = 0; k < nz; k++)
                     {
-                        scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] 
-                            = scalar_mom[(l)+(g*(cmom-1))+(ng*(cmom-1)*i)+(ng*(cmom-1)*nx*j)+(ng*(cmom-1)*nx*ny*k)];
+                        out_scalar_moments[l+((cmom-1)*i)+((cmom-1)*nx*j)+((cmom-1)*nx*ny*k)+((cmom-1)*nx*ny*nz*g)] 
+                            = scalar_mom(g,l,i,j,k);
                     }
                 }
             }
