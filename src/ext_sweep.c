@@ -98,7 +98,7 @@ void sweep_octant(
 
     int cells_processed = 0;
 #pragma omp target data if(OFFLOAD) device(MIC_DEVICE) \
-    map(to: cells[:ichunk+ny+nz-2])
+    map(to: cells[:ichunk*ny*nz])
     for (unsigned int d = 0; d < ndiag; d++)
     {
         int ncells = num_cells[d];
