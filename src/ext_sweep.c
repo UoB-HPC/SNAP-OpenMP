@@ -97,6 +97,8 @@ void sweep_octant(
     double* l_flux_out = (timestep % 2 == 0 ? flux_out : flux_in) + offset;
 
     int cells_processed = 0;
+#pragma omp target data if(OFFLOAD) device(MIC_DEVICE) \
+    map(to: cells[:ichunk+ny+nz-2])
     for (unsigned int d = 0; d < ndiag; d++)
     {
         int ncells = num_cells[d];
@@ -119,7 +121,6 @@ void perform_sweep(
     cell* cells;
     int* num_cells;
     compute_sweep_order(&num_cells, &cells);
-
     for (int o = 0; o < noct; o++)
     {
         sweep_octant(global_timestep, o, ndiag, cells, num_cells, num_groups_todo);
@@ -145,8 +146,7 @@ void sweep_cell(
         const unsigned int num_groups_todo,
         const unsigned int num_cells)
 {
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE) \
-        map(to: cell_index[:num_cells])
+#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
 #pragma omp parallel for collapse(2)
     for(int nc = 0; nc < num_cells; ++nc)
     {
