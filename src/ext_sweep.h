@@ -11,8 +11,6 @@ void sweep_octant(
         const unsigned int timestep, 
         const unsigned int oct, 
         const unsigned int ndiag, 
-        const cell* cells,
-        const int* num_cells,
         const unsigned int num_groups_todo);
 
 void sweep_cell(
@@ -25,9 +23,9 @@ void sweep_cell(
         const cell * restrict cell_index,
         const unsigned int * restrict groups_todo,
         const unsigned int num_groups_todo,
-        const unsigned int num_cells);
+        const unsigned int ncells);
 
-void compute_sweep_order(int** num_cells, cell** cells);
+void compute_sweep_order();
 
 #pragma omp end declare target
 

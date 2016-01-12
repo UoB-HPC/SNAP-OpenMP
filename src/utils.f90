@@ -47,7 +47,7 @@ MODULE utils_module
 !   Declaration potentially needed for Cray. Seems harmless for others.
 !_______________________________________________________________________
 
-    !INTEGER, EXTERNAL :: IARGC
+   INTEGER, EXTERNAL :: IARGC
 !_______________________________________________________________________
 !
 !   Return if not root. Loop over the first two command line arguments

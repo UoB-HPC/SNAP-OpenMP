@@ -37,14 +37,15 @@ void ext_solve_(
     printf("This problem requires more than %.3fGB of memory capacity.\n",
             (mem_capacity * sizeof(double)) / (1024*1024*1024));
 
-#pragma omp target update if(OFFLOAD) device(MIC_DEVICE) \
+#pragma omp target update if(OFFLOAD) \
     to(nx, ny, nz, ng, nang, noct, cmom, nmom, \
             nmat, ichunk, timesteps, dt, dx, dy, dz, outers, inners, \
             epsi, tolr, dd_i, global_timestep)
-#pragma omp target data if(OFFLOAD) device(MIC_DEVICE) \
+#pragma omp target data if(OFFLOAD) \
     map(to: mu[:mu_len], eta[:eta_len], xi[:xi_len], scat_coeff[:scat_coeff_len], \
             weights[:weights_len], velocity[:velocity_len], xs[:xs_len], mat[:mat_len], \
-            fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], lma[:lma_len]) \
+            fixed_source[:fixed_source_len], gg_cs[:gg_cs_len], lma[:lma_len],\
+            cells[:ichunk*ny*nz]) \
     map(alloc: flux_i[:flux_i_len], flux_j[:flux_j_len], flux_k[:flux_k_len], \
             dd_j[:dd_j_len], dd_k[:dd_k_len], total_cross_section[:total_cross_section_len], \
             scat_cs[:scat_cs_len], denom[:denom_len], source[:source_len], \
@@ -58,10 +59,10 @@ void ext_solve_(
         iterate();
     }
 
-    _mm_free(old_outer_scalar);
-    _mm_free(new_scalar);
-    _mm_free(old_inner_scalar);
-    _mm_free(groups_todo);
+    free(old_outer_scalar);
+    free(new_scalar);
+    free(old_inner_scalar);
+    free(groups_todo);
 }
 
 // Argument list:
@@ -90,25 +91,27 @@ void initialise_host_memory(
 {
     START_PROFILING;
 
-    flux_i = (double*)_mm_malloc(sizeof(double)*nang*ny*nz*ng, VEC_ALIGN);
-    flux_j = (double*)_mm_malloc(sizeof(double)*nang*nx*nz*ng, VEC_ALIGN);
-    flux_k = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*ng, VEC_ALIGN);
-    dd_j = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
-    dd_k = (double*)_mm_malloc(sizeof(double)*nang, VEC_ALIGN);
-    total_cross_section = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    scat_cs = (double*)_mm_malloc(sizeof(double)*nmom*nx*ny*nz*ng, VEC_ALIGN);
-    denom = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng, VEC_ALIGN);
-    source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
-    time_delta = (double*)_mm_malloc(sizeof(double)*ng, VEC_ALIGN);
-    groups_todo = (unsigned int*)_mm_malloc(sizeof(unsigned int)*ng, VEC_ALIGN);
-    g2g_source = (double*)_mm_malloc(sizeof(double)*cmom*nx*ny*nz*ng, VEC_ALIGN);
-    scalar_flux = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    flux_in = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
-    flux_out = (double*)_mm_malloc(sizeof(double)*nang*nx*ny*nz*ng*noct, VEC_ALIGN);
-    scalar_mom = (double*)_mm_malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng, VEC_ALIGN);
-    old_outer_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    old_inner_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
-    new_scalar = (double*)_mm_malloc(sizeof(double)*nx*ny*nz*ng, VEC_ALIGN);
+    flux_i = (double*)malloc(sizeof(double)*nang*ny*nz*ng);
+    flux_j = (double*)malloc(sizeof(double)*nang*nx*nz*ng);
+    flux_k = (double*)malloc(sizeof(double)*nang*nx*ny*ng);
+    dd_j = (double*)malloc(sizeof(double)*nang);
+    dd_k = (double*)malloc(sizeof(double)*nang);
+    total_cross_section = (double*)malloc(sizeof(double)*nx*ny*nz*ng);
+    scat_cs = (double*)malloc(sizeof(double)*nmom*nx*ny*nz*ng);
+    denom = (double*)malloc(sizeof(double)*nang*nx*ny*nz*ng);
+    source = (double*)malloc(sizeof(double)*cmom*nx*ny*nz*ng);
+    time_delta = (double*)malloc(sizeof(double)*ng);
+    groups_todo = (unsigned int*)malloc(sizeof(unsigned int)*ng);
+    g2g_source = (double*)malloc(sizeof(double)*cmom*nx*ny*nz*ng);
+    scalar_flux = (double*)malloc(sizeof(double)*nx*ny*nz*ng);
+    flux_in = (double*)malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
+    flux_out = (double*)malloc(sizeof(double)*nang*nx*ny*nz*ng*noct);
+    scalar_mom = (double*)malloc(sizeof(double)*(cmom-1)*nx*ny*nz*ng);
+    old_outer_scalar = (double*)malloc(sizeof(double)*nx*ny*nz*ng);
+    old_inner_scalar = (double*)malloc(sizeof(double)*nx*ny*nz*ng);
+    new_scalar = (double*)malloc(sizeof(double)*nx*ny*nz*ng);
+    cells = (cell*)malloc(sizeof(cell)*ichunk*ny*nz);
+    num_cells = (int*)malloc((ichunk+ny+nz-2)*sizeof(int));
 
     // Read-only buffers initialised in Fortran code
     mu = mu_in;
@@ -123,7 +126,9 @@ void initialise_host_memory(
     xs = xs_in;
     scat_coeff = transpose_scat_coeff(scat_coeff_in);
 
-    STOP_PROFILING(__func__, false);
+    compute_sweep_order();
+
+    STOP_PROFILING(__func__);
 }
 
 // Initialises the problem parameters
@@ -167,7 +172,7 @@ void ext_initialise_parameters_(
         printf("Warning: nx and ichunk are different - expect the answers to be wrong...\n");
     }
 
-    STOP_PROFILING(__func__, false);
+    STOP_PROFILING(__func__);
 }
 
 
@@ -198,7 +203,7 @@ void iterate(void)
             // Reset the inner convergence list
             bool inner_done = false;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+#pragma omp target teams distribute if(OFFLOAD)
             for (unsigned int g = 0; g < ng; g++)
             {
                 groups_todo[g] = g;
@@ -313,17 +318,18 @@ void reduce_angular(void)
     double* angular = (global_timestep % 2 == 0) ? flux_out : flux_in;
     double* angular_prev = (global_timestep % 2 == 0) ? flux_in : flux_out;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
     for(unsigned int o = 0; o < 8; ++o)
     {
-#pragma omp parallel for collapse(3)
+#pragma omp target teams distribute \
+        collapse(3) if(OFFLOAD)
+//#pragma omp parallel for 
         for(int k = 0; k < nz; ++k)
         {
             for(int j = 0; j < ny; ++j)
             {
                 for(int i = 0; i < nx; ++i)
                 {
-#pragma omp simd lastprivate(i,j,k,o) aligned(weights:64)
+//#pragma omp simd lastprivate(i,j,k,o)
                     for (unsigned int g = 0; g < ng; g++)
                     {
                         const bool tg = time_delta(g) != 0.0;
@@ -361,7 +367,7 @@ void reduce_angular(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 
@@ -440,7 +446,7 @@ double* transpose_scat_coeff(double* scat_coeff_in)
 {
     START_PROFILING;
 
-    double* scat_coeff = (double*)_mm_malloc(sizeof(double)*nang*cmom*noct, VEC_ALIGN);
+    double* scat_coeff = (double*)malloc(sizeof(double)*nang*cmom*noct);
 
     for(unsigned int o = 0; o < noct; ++o)
     {
@@ -454,7 +460,7 @@ double* transpose_scat_coeff(double* scat_coeff_in)
         }
     }
 
-    STOP_PROFILING(__func__,true);
+    STOP_PROFILING(__func__);
 
     return scat_coeff;
 }

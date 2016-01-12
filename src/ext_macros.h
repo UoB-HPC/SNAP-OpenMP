@@ -7,8 +7,6 @@
 #define MIC_DEVICE 0
 #endif
 
-#define VEC_ALIGN 64
-
 /*
  *  *       Array access macros
  *   */

@@ -1,20 +1,17 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include "ext_profiler.h"
+#include "omp.h"
 
 #ifdef ENABLE_PROFILING
 
-#define MS 1000.0
-#define NS 1000000000.0
-#define NS_MS 1000000.0
 #define _PROFILER_MAX_KERNELS 2048
 
 #pragma omp declare target
 
 // Internal variables
-struct timespec _profiler_start;
-struct timespec _profiler_end;
+double _profiler_start;
+double _profiler_end;
 unsigned int _profiler_kernelcount = 0;
 profile _profiler_entries[_PROFILER_MAX_KERNELS];
 
@@ -23,13 +20,13 @@ profile _profiler_entries[_PROFILER_MAX_KERNELS];
 // Internally start the profiling timer
 void _profiler_start_timer()
 {
-    clock_gettime(CLOCK_MONOTONIC, &_profiler_start);
+    _profiler_start = omp_get_wtime();
 }
 
 // Internally end the profiling timer and store results
-void _profiler_end_timer(const char* kernel_name, bool count_for_total)
+void _profiler_end_timer(const char* kernel_name)
 {
-    clock_gettime(CLOCK_MONOTONIC, &_profiler_end);
+    _profiler_end = omp_get_wtime();
 
     // Check if an entry exists
     int ii;
@@ -49,13 +46,8 @@ void _profiler_end_timer(const char* kernel_name, bool count_for_total)
     }
 
     // Update number of calls and time
-    long elapsed_sec = _profiler_end.tv_sec-_profiler_start.tv_sec;
-    long elapsed_ns = _profiler_end.tv_nsec-_profiler_start.tv_nsec;
-    _profiler_entries[ii].time += (elapsed_ns < 0) 
-        ? (elapsed_sec-1)*MS + (NS+elapsed_ns)/NS_MS 
-        : elapsed_sec*MS + elapsed_ns/NS_MS;
+    _profiler_entries[ii].time += _profiler_end-_profiler_start;
     _profiler_entries[ii].calls++;
-    _profiler_entries[ii].count_for_total = count_for_total;
 }
 
 // Print the profiling results to output
@@ -63,23 +55,19 @@ void _profiler_print_results()
 {
     printf("\n-------------------------------------------------------------\n");
     printf("\nProfiling Results:\n\n");
-    printf("%-30s%8s%20s\n", "Kernel Name", "Calls", "Runtime (ms)");
+    printf("%-30s%8s%20s\n", "Kernel Name", "Calls", "Runtime (s)");
 
     double total_elapsed_time = 0.0;
     for(int ii = 0; ii < _profiler_kernelcount; ++ii)
     {
-        if(_profiler_entries[ii].count_for_total)
-        {
-            total_elapsed_time += _profiler_entries[ii].time;
-        }
+        total_elapsed_time += _profiler_entries[ii].time;
 
-        printf("%-30s%8d%20.03F%c\n", _profiler_entries[ii].name, 
+        printf("%-30s%8d%20.03F\n", _profiler_entries[ii].name, 
                 _profiler_entries[ii].calls, 
-                _profiler_entries[ii].time,
-                _profiler_entries[ii].count_for_total ? ' ' : '*');
+                _profiler_entries[ii].time);
     }
 
-    printf("\nTotal elapsed time: %.03Fms, entries * are excluded.\n", total_elapsed_time);
+    printf("\nTotal elapsed time: %.03Fs, entries * are excluded.\n", total_elapsed_time);
     printf("\n-------------------------------------------------------------\n\n");
 }
 

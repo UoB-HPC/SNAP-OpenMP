@@ -60,6 +60,9 @@ unsigned int* groups_todo;
 double* old_outer_scalar;
 double* old_inner_scalar;
 double* new_scalar;
+
+cell* cells;
+int* num_cells;
      
         // Global variable for the timestep
 unsigned int global_timestep;

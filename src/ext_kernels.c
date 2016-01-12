@@ -12,8 +12,8 @@ void calc_denominator(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD)
+//#pragma omp parallel for
     for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
     {
         for (unsigned int g = 0; g < ng; ++g)
@@ -26,7 +26,7 @@ void calc_denominator(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the time delta
@@ -34,32 +34,32 @@ void calc_time_delta(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+#pragma omp target teams distribute if(OFFLOAD)
     for(int g = 0; g < ng; ++g)
     {
         time_delta(g) = 2.0 / (dt * velocity(g));
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the diamond difference coefficients
 void calc_dd_coefficients(void)
 {
     START_PROFILING;
+        
+    dd_i = 2.0 / dx;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+//#pragma omp target update if(OFFLOAD) to(dd_i)
+
+#pragma omp target teams distribute if(OFFLOAD)
+    for(int a = 0; a < nang; ++a)
     {
-        dd_i = 2.0 / dx;
-
-        for(int a = 0; a < nang; ++a)
-        {
-            dd_j(a) = (2.0/dy)*eta(a);
-            dd_k(a) = (2.0/dz)*xi(a);
-        }
+        dd_j(a) = (2.0/dy)*eta(a);
+        dd_k(a) = (2.0/dz)*xi(a);
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the total cross section from the spatial mapping
@@ -67,8 +67,8 @@ void calc_total_cross_section(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD)
+    //#pragma omp parallel for
     for(int k = 0; k < nz; ++k)
     {
         for(int j = 0; j < ny; ++j)
@@ -83,15 +83,15 @@ void calc_total_cross_section(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 void calc_scattering_cross_section(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD)
+    //#pragma omp parallel for
     for(unsigned int g = 0; g < ng; ++g)
     {
         for (unsigned int k = 0; k < nz; k++)
@@ -109,7 +109,7 @@ void calc_scattering_cross_section(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the outer source
@@ -117,8 +117,9 @@ void calc_outer_source(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for collapse(4)
+#pragma omp target teams distribute \
+    collapse(4) if(OFFLOAD) 
+    //#pragma omp parallel for 
     for (unsigned int g1 = 0; g1 < ng; g1++)
     {
         for(int k = 0; k < nz; ++k)
@@ -155,7 +156,7 @@ void calc_outer_source(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 // Calculate the inner source
@@ -163,8 +164,9 @@ void calc_inner_source(void)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for collapse(4)
+#pragma omp target teams distribute \
+    collapse(4) if(OFFLOAD) 
+    //#pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
         for(int k = 0; k < nz; ++k)
@@ -191,20 +193,20 @@ void calc_inner_source(void)
         }
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }
 
 void zero_flux_in_out(void)
 {
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
     for(int i = 0; i < flux_in_len; ++i)
     {
         flux_in[i] = 0.0;
     }
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
     for(int i = 0; i < flux_out_len; ++i)
     {
         flux_out[i] = 0.0;
@@ -213,27 +215,32 @@ void zero_flux_in_out(void)
 
 void zero_edge_flux_buffers(void)
 {
-    int fi_len = nang*ng*ny*nz;
-    int fj_len = nang*ng*nx*nz;
-    int fk_len = nang*ng*nx*ny;
-
-#define MAX(A,B) (((A) > (B)) ? (A) : (B))
-    int max_length = MAX(MAX(fi_len, fj_len), fk_len);
-
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
-    for(int i = 0; i < max_length; ++i)
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
+    for(int i = 0; i < flux_i_len; ++i)
     {
-        if(i < fi_len) flux_i[i] = 0.0;
-        if(i < fj_len) flux_j[i] = 0.0;
-        if(i < fk_len) flux_k[i] = 0.0;
+        flux_i[i] = 0.0;
+    }
+
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
+    for(int i = 0; i < flux_j_len; ++i)
+    {
+        flux_j[i] = 0.0;
+    }
+
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
+    for(int i = 0; i < flux_k_len; ++i)
+    {
+        flux_k[i] = 0.0;
     }
 }
 
 void zero_flux_moments_buffer(void)
 {
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
     for(int i = 0; i < scalar_mom_len; ++i)
     {
         scalar_mom[i] = 0.0;
@@ -242,8 +249,8 @@ void zero_flux_moments_buffer(void)
 
 void zero_scalar_flux(void)
 {
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
     for(int i = 0; i < scalar_flux_len; ++i)
     {
         scalar_flux[i] = 0.0;
@@ -260,12 +267,13 @@ bool check_convergence(
 {
     START_PROFILING;
 
-    bool r = true;
+    bool r = 1;
 
-    int ngt = 0;
+    int* temp_groups_todo = (int*)malloc(sizeof(int)*ng);
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute reduction(min: r)\
+    map(from: temp_groups_todo[:ng]) if(OFFLOAD) 
+    //#pragma omp parallel for
     for (unsigned int g = 0; g < ng; g++)
     {
         for (unsigned int ind = 0; ind < nx*ny*nz; ind++)
@@ -276,16 +284,12 @@ bool check_convergence(
 
             if (val > epsi)
             {
-                r = false;
+                r = 0;
 
                 if (inner)
                 {
-                    #pragma omp critical
-                    {
-                        // Add g to the list of groups to do if we need to do it
-                        groups_todo[ngt] = g;
-                        ngt++;
-                    }
+                    // Add g to the list of groups to do if we need to do it
+                    temp_groups_todo[g] = 1;
                 }
 
                 break;
@@ -293,9 +297,17 @@ bool check_convergence(
         }
     }
 
-    *num_groups_todo = ngt;
+    // Reorganise groups_todo
+    for(int ii = 0; ii < ng; ++ii)
+    {
+        if(temp_groups_todo[ii])
+        {
+            groups_todo[*num_groups_todo] = ii;
+            (*num_groups_todo)++;
+        }
+    }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 
     return r;
 }
@@ -307,19 +319,18 @@ void initialise_device_memory(void)
     zero_flux_in_out();
     zero_edge_flux_buffers();
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
+#pragma omp target teams distribute if(OFFLOAD)
+    //#pragma omp parallel for
+    for(int ii = 0; ii < g2g_source_len; ++ii)
     {
-#pragma omp parallel for
-        for(int ii = 0; ii < g2g_source_len; ++ii)
-        {
-            g2g_source[ii] = 0.0;
-        }
+        g2g_source[ii] = 0.0;
+    }
 
-#pragma omp parallel for
-        for(int ii = 0; ii < source_len; ++ii)
-        {
-            source[ii] = 0.0;
-        }
+#pragma omp target teams distribute if(OFFLOAD)
+    //#pragma omp parallel for
+    for(int ii = 0; ii < source_len; ++ii)
+    {
+        source[ii] = 0.0;
     }
 }   
 
@@ -328,12 +339,12 @@ void store_scalar_flux(double* to)
 {
     START_PROFILING;
 
-#pragma omp target if(OFFLOAD) device(MIC_DEVICE)
-#pragma omp parallel for
+#pragma omp target teams distribute if(OFFLOAD) 
+    //#pragma omp parallel for
     for(int i = 0; i < scalar_flux_len; ++i)
     {
         to[i] = scalar_flux[i];
     }
 
-    STOP_PROFILING(__func__, true);
+    STOP_PROFILING(__func__);
 }

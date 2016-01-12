@@ -3,15 +3,16 @@
 #
 
 # User defined parameters
-DBG 	 = no
-MIC_MODE = offload
-PROFILER = yes
-COPTION  = #-qopt-report=5 -qopt-report-phase=vec
-FOPTION  = 
-OPENMP 	 = -qopenmp
-TARGET 	 = snap
-CC 		 = mpiicc
-FORTRAN  = mpiifort
+COMPILER 	= CRAY
+DBG 	 	= no
+MIC_MODE 	= offload
+CPROFILER 	= yes
+COPTION  	= #-qopt-report=5 -qopt-report-phase=vec
+FOPTION  	= 
+OPENMP 	 	= #-qopenmp
+TARGET 	 	= snap
+CC 		 	= cc
+FORTRAN  	= ftn
 
 # Enables native or offload compilation
 ifeq ($(MIC_MODE), native)
@@ -23,26 +24,27 @@ endif
 ifeq ($(MIC_MODE), none)
   MIC = -DOFFLOAD=0
 endif
-
-# Enables debugging mode
-ifeq ($(DBG),yes)
-  #TARGET = snap_db
-  FFLAGS = -g -O0 -check bounds -traceback $(OPENMP) $(MIC) $(FOPTION)
-  CFLAGS = -g -O0 -debug all -traceback $(OPENMP) $(MIC) $(COPTION)
-else
-  FFLAGS = -O3 $(MIC) $(OPENMP)
-  CFLAGS = -O3 $(MIC) $(OPENMP) $(COPTION)
+ifeq ($(CPROFILER), yes)
+  COPTION += -DENABLE_PROFILING
 endif
+
+ifeq ($(DBG),yes)
+  FFLAGS_INTEL 		= -g -O0 -check bounds -traceback 
+  FFLAGS_CRAY       = -O0 -g -em -eD
+  CFLAGS_INTEL 		= -g -O0 -debug all -traceback
+  CFLAGS_CRAY       = -O0 -g -em -eD
+else
+  FFLAGS_INTEL	   = -O3
+  FFLAGS_CRAY      = -em -ra -h acc_model=fast_addr:no_deep_copy:auto_async_all
+  CFLAGS_INTEL     = -O3
+  CFLAGS_CRAY      = -em -h list=a
+endif
+
+CFLAGS = $(CFLAGS_$(COMPILER)) $(OPENMP) $(MIC) $(COPTION)
+FFLAGS = $(FFLAGS_$(COMPILER)) $(OPENMP) $(MIC) $(FOPTION)
 
 CFLAGS2 = -lm
 FFLAG2 =
-
-# Enables fine grained profiling of C implementation
-ifeq ($(PROFILER), yes)
-  CFLAGS += -std=gnu99 -DENABLE_PROFILING
-else
-  CFLAGS += -std=c99 
-endif
 
 ifdef TIMING
   CFLAGS += -DTIMING
@@ -114,7 +116,7 @@ ext_init.o:	ext_kernels.h
 # Cleanup
 #
 clean:
-	rm -f *.o *.mod *.bc sweep_kernels.h
+	rm -f *.o *.mod *.ptx *.lst *.cub *.bc sweep_kernels.h
 
 #
 # Count lines of code
