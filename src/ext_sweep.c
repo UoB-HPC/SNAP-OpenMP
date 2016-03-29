@@ -160,15 +160,9 @@ void sweep_cell(
 #define dd_j_s(a) dd_j_s[(a)]
 #define dd_k_s(a) dd_k_s[(a)]
 
-//    for(int ii = 0; ii < ncells*num_groups_todo*nang; ++ii)
-//    {
-//        int a = ii % nang;
-//        int nc = (ii / nang*num_groups_todo);
-//        int tg = (ii / nang) % num_groups_todo;
-#pragma omp target teams distribute simd
+#pragma omp target teams distribute
     for(int nc = 0; nc < ncells; ++nc)
     {
-#pragma omp simd
         for(int tg = 0; tg < num_groups_todo; ++tg)
         {
             // Get indexes for angle and group
